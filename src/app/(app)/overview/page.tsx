@@ -1,17 +1,10 @@
 import Link from "next/link";
 import { getOverviewData } from "@/lib/queries";
-import { actualCost, estimatedSpendFor, detailPath } from "@/lib/derived";
-import { money, num } from "@/lib/format";
+import { actualCost, estimatedSpendFor, hasRealBudget, detailPath } from "@/lib/derived";
+import { money, num, fmtTimeframe } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const GRAN_LABEL: Record<string, string> = {
-  day: "Day",
-  week: "Week",
-  month: "Month",
-  quarter: "Quarter",
-  year: "Year",
-};
 const GRAN_ORDER = ["day", "week", "month", "quarter", "year"];
 const STATUS_LABEL: Record<string, string> = {
   not_started: "Not started",
@@ -19,13 +12,6 @@ const STATUS_LABEL: Record<string, string> = {
   done: "Done",
   on_hold: "On hold",
 };
-
-function monthKeyOf(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-function quarterKeyOf(d: Date) {
-  return `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`;
-}
 
 export default async function OverviewPage() {
   const { houses, rooms, details, materialItems, lineItems, inboxItems } = await getOverviewData();
@@ -40,33 +26,29 @@ export default async function OverviewPage() {
     );
   }
 
-  const now = new Date();
-  const thisMonth = monthKeyOf(now);
-  const thisQuarter = quarterKeyOf(now);
-  let monthSpend = 0;
-  let quarterSpend = 0;
-  for (const l of lineItems) {
-    if (!l.date) continue;
-    const d = new Date(l.date);
-    if (Number.isNaN(d.getTime())) continue;
-    if (monthKeyOf(d) === thisMonth) monthSpend += num(l.cost);
-    if (quarterKeyOf(d) === thisQuarter) quarterSpend += num(l.cost);
-  }
-
   const activeCount = details.filter((d) => d.status === "in_progress").length;
   const unfiledInbox = inboxItems.filter((i) => !i.filedTo).length;
 
-  // Same "over budget" definition as the Detail page's own budget bars
-  // (src/app/(app)/detail/[id]/detail-page.tsx): only meaningful once an
-  // estimate actually exists.
-  const overBudget = details
-    .map((d) => {
-      const est = estimatedSpendFor(d, materialItems);
-      const act = actualCost(lineItems, d.id);
-      return { detail: d, est, act };
-    })
-    .filter((x) => x.est > 0 && x.act > x.est)
-    .sort((a, b) => b.act - b.est - (a.act - a.est));
+  let totalSpent = 0;
+  let totalProjected = 0;
+  let overBudgetTotal = 0;
+  let remainingTotal = 0;
+  const overBudget: { detail: (typeof details)[number]; est: number; act: number }[] = [];
+  for (const d of details) {
+    const act = actualCost(lineItems, d.id);
+    const est = estimatedSpendFor(d, materialItems, act);
+    totalSpent += act;
+    totalProjected += est;
+    if (hasRealBudget(d, materialItems)) {
+      if (act > est) {
+        overBudgetTotal += act - est;
+        overBudget.push({ detail: d, est, act });
+      } else {
+        remainingTotal += est - act;
+      }
+    }
+  }
+  overBudget.sort((a, b) => b.act - b.est - (a.act - a.est));
 
   const needsSourcing = materialItems
     .filter((m) => m.status === "need_to_source")
@@ -83,6 +65,8 @@ export default async function OverviewPage() {
     })
     .slice(0, 6);
 
+  const purchasePriceTotal = houses.reduce((s, h) => s + num(h.purchasePrice), 0);
+
   return (
     <>
       <div className="ov-stats">
@@ -91,26 +75,60 @@ export default async function OverviewPage() {
           <div className="ov-stat-label">Active details</div>
         </div>
         <div className="ov-stat">
-          <div className="ov-stat-num">{money(monthSpend)}</div>
-          <div className="ov-stat-label">Spent this month</div>
+          <div className="ov-stat-num">{money(totalSpent)}</div>
+          <div className="ov-stat-label">Total spent</div>
         </div>
         <div className="ov-stat">
-          <div className="ov-stat-num">{money(quarterSpend)}</div>
-          <div className="ov-stat-label">Spent this quarter</div>
+          <div className="ov-stat-num">{money(totalProjected)}</div>
+          <div className="ov-stat-label">Total projected</div>
+        </div>
+        <div className="ov-stat">
+          <div className="ov-stat-num" style={{ color: overBudgetTotal ? "var(--danger)" : undefined }}>
+            {money(overBudgetTotal)}
+          </div>
+          <div className="ov-stat-label">Over budget</div>
+        </div>
+        <div className="ov-stat">
+          <div className="ov-stat-num">{money(remainingTotal)}</div>
+          <div className="ov-stat-label">Left to spend (budgeted)</div>
         </div>
         <div className="ov-stat">
           <div className="ov-stat-num">{unfiledInbox}</div>
           <div className="ov-stat-label">Unfiled inbox</div>
         </div>
         <div className="ov-stat">
-          <div className="ov-stat-num">{overBudget.length}</div>
-          <div className="ov-stat-label">Over budget</div>
-        </div>
-        <div className="ov-stat">
           <div className="ov-stat-num">{needsSourcing.length}</div>
           <div className="ov-stat-label">Need sourcing</div>
         </div>
       </div>
+
+      {purchasePriceTotal ? (
+        <div className="panel-card" style={{ marginBottom: "1rem" }}>
+          <h4>🏡 All-in value</h4>
+          <div className="totals-strip">
+            <div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Purchase price(s)</div>
+              <div style={{ fontWeight: 700 }}>{money(purchasePriceTotal)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>+ Spent on projects</div>
+              <div style={{ fontWeight: 700 }}>{money(totalSpent)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>All-in so far</div>
+              <div style={{ fontWeight: 800, color: "var(--accent-strong)" }}>
+                {money(purchasePriceTotal + totalSpent)}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>All-in if fully spent as planned</div>
+              <div style={{ fontWeight: 800, color: "var(--accent-strong)" }}>
+                {money(purchasePriceTotal + totalProjected)}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="panel-grid">
         <div className="panel-card">
@@ -177,7 +195,7 @@ export default async function OverviewPage() {
                     {STATUS_LABEL[d.status || "not_started"]}
                   </span>
                   <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                    {GRAN_LABEL[d.timeframeGranularity!]}: {d.timeframeValue || "—"}
+                    {fmtTimeframe(d.timeframeGranularity, d.timeframeValue)}
                   </span>
                 </div>
               </Link>

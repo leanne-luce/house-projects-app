@@ -92,11 +92,12 @@ export async function getDetailPageData(detailId: string) {
 }
 
 export async function getInboxTabData() {
-  const [items, detailsRows, housesRows, roomsRows] = await Promise.all([
+  const [items, detailsRows, housesRows, roomsRows, assetRows] = await Promise.all([
     db.select().from(inboxItems),
     db.select().from(details).orderBy(asc(details.createdAt)),
     db.select().from(houses).orderBy(asc(houses.createdAt)),
     db.select().from(rooms).orderBy(asc(rooms.createdAt)),
+    db.select().from(assets),
   ]);
   return {
     unfiled: items
@@ -105,6 +106,7 @@ export async function getInboxTabData() {
     details: detailsRows,
     houses: housesRows,
     rooms: roomsRows,
+    contentTypeByAssetId: Object.fromEntries(assetRows.map((a) => [a.id, a.contentType])),
   };
 }
 

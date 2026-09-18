@@ -54,7 +54,10 @@ export async function addHouse(name: string, address: string) {
   return row;
 }
 
-export async function updateHouse(id: string, patch: Partial<{ name: string; address: string | null }>) {
+export async function updateHouse(
+  id: string,
+  patch: Partial<{ name: string; address: string | null; purchasePrice: string | null }>
+) {
   await db.update(houses).set(patch).where(eq(houses.id, id));
   revalidateEverything();
 }

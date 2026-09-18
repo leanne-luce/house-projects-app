@@ -155,6 +155,14 @@
     background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm);
     overflow:hidden; position:relative;
   }
+  /* align-items:start on the grid (above) keeps a collapsed card from being
+     stretched tall by an expanded sibling in the same row. An *open* card
+     opts back into stretching (align-self overrides the container's
+     align-items per-item), so when two rooms in the same row are both open,
+     the shorter one's card still grows to match — consistent row heights
+     without dragging collapsed neighbors along. */
+  .room-card.open { display:flex; flex-direction:column; align-self:stretch; }
+  .room-card.open .room-card-body { flex:1; }
   .room-card::before {
     content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--accent);
   }
@@ -169,6 +177,10 @@
   .room-status-seg.in_progress { background:var(--warn); }
   .room-status-seg.on_hold { background:var(--danger); }
   .room-status-seg.done { background:var(--good); }
+  .room-progress-row { display:flex; align-items:center; gap:0.4rem; margin-top:0.3rem; }
+  .room-progress-track { flex:1; height:0.3rem; border-radius:999px; overflow:hidden; background:var(--border); }
+  .room-progress-fill { height:100%; background:var(--good); border-radius:999px; transition:width .35s ease; }
+  .room-progress-pct { font-size:0.66rem; color:var(--text-muted); flex-shrink:0; min-width:2ch; text-align:right; }
   .room-card-body { padding:0 0.75rem 0.75rem 0.9rem; border-top:1px solid var(--border); }
   .detail-row {
     display:flex; align-items:center; justify-content:space-between; gap:0.6rem;
@@ -315,7 +327,7 @@
   /* Overview */
   .ov-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(7rem,1fr)); gap:0.7rem; margin-bottom:1rem; }
   .ov-stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:0.8rem; text-align:center; box-shadow:var(--shadow); }
-  .ov-stat-num { font-size:1.4rem; font-weight:800; color:var(--accent-strong); }
+  .ov-stat-num { font-size:1.25rem; font-weight:800; color:var(--accent-strong); white-space:nowrap; }
   .ov-stat-label { font-size:0.72rem; color:var(--text-muted); margin-top:0.15rem; }
 
   /* Editable house/room fields */

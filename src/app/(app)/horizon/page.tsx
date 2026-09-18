@@ -1,5 +1,6 @@
 import { getHousesTreeData } from "@/lib/queries";
 import { detailPath } from "@/lib/derived";
+import { fmtTimeframe, monthKeyFromWeek } from "@/lib/format";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,10 @@ const STATUS_LABEL: Record<string, string> = {
   on_hold: "On hold",
 };
 const ORDER = ["day", "week", "month", "quarter", "year", ""];
+// In progress work floats to the top of each group (it's what needs
+// attention right now); done sinks to the bottom (it's just a record at
+// this point).
+const STATUS_SORT: Record<string, number> = { in_progress: 0, not_started: 1, on_hold: 1, done: 2 };
 
 export default async function HorizonPage() {
   const { details, houses, rooms } = await getHousesTreeData();
@@ -34,9 +39,21 @@ export default async function HorizonPage() {
 
   const buckets = new Map<string, { gran: string; value: string; items: typeof details }>();
   for (const d of details) {
-    const gran = d.timeframeGranularity || "";
-    const key = gran + "||" + (gran ? d.timeframeValue || "" : "");
-    if (!buckets.has(key)) buckets.set(key, { gran, value: d.timeframeValue || "", items: [] });
+    let gran = d.timeframeGranularity || "";
+    let value = gran ? d.timeframeValue || "" : "";
+    // Week now displays as just its containing month ("Sep '26" — see
+    // fmtTimeframe), so a week-granularity item folds into the same group
+    // as month-granularity items in that month, rather than getting its
+    // own identically-labeled group elsewhere in the sort order.
+    if (gran === "week" && value) {
+      const monthKey = monthKeyFromWeek(value);
+      if (monthKey) {
+        gran = "month";
+        value = monthKey;
+      }
+    }
+    const key = gran + "||" + value;
+    if (!buckets.has(key)) buckets.set(key, { gran, value, items: [] });
     buckets.get(key)!.items.push(d);
   }
   const keys = [...buckets.keys()].sort((a, b) => {
@@ -51,8 +68,15 @@ export default async function HorizonPage() {
     <>
       {keys.map((k) => {
         const b = buckets.get(k)!;
-        const label = b.gran ? `${GRAN_LABEL[b.gran]}: ${b.value || "—"}` : "Someday / unscheduled";
-        const items = [...b.items].sort((x, y) => x.name.localeCompare(y.name));
+        const label = b.gran
+          ? fmtTimeframe(b.gran, b.value) || `${GRAN_LABEL[b.gran]}: ${b.value || "—"}`
+          : "Someday / unscheduled";
+        const items = [...b.items].sort((x, y) => {
+          const si =
+            (STATUS_SORT[x.status || "not_started"] ?? 1) - (STATUS_SORT[y.status || "not_started"] ?? 1);
+          if (si !== 0) return si;
+          return x.name.localeCompare(y.name);
+        });
         return (
           <div className="horizon-group" key={k}>
             <h3>{label}</h3>

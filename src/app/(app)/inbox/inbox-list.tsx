@@ -19,11 +19,13 @@ export function InboxList({
   details,
   houses,
   rooms,
+  contentTypeByAssetId,
 }: {
   unfiled: InboxItem[];
   details: Detail[];
   houses: House[];
   rooms: Room[];
+  contentTypeByAssetId: Record<string, string | null>;
 }) {
   const [pending, startTransition] = useTransition();
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -47,7 +49,8 @@ export function InboxList({
             onFileSelected={setPendingFile}
             disabled={pending}
             className="secondary"
-            label={pendingFile ? `📷 ${pendingFile.name.slice(0, 20)}` : "📷 Add a photo"}
+            accept="image/*,video/*"
+            label={pendingFile ? `📷 ${pendingFile.name.slice(0, 20)}` : "📷 Add a photo/video"}
           />
           <button
             className="primary"
@@ -85,6 +88,7 @@ export function InboxList({
               sortedDetails={sortedDetails}
               houses={houses}
               rooms={rooms}
+              contentTypeByAssetId={contentTypeByAssetId}
             />
           ))}
         </div>
@@ -104,22 +108,29 @@ function InboxRow({
   sortedDetails,
   houses,
   rooms,
+  contentTypeByAssetId,
 }: {
   item: InboxItem;
   isLast: boolean;
   sortedDetails: Detail[];
   houses: House[];
   rooms: Room[];
+  contentTypeByAssetId: Record<string, string | null>;
 }) {
   const [filing, setFiling] = useState(false);
   const [creatingNew, setCreatingNew] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const isVideo = item.assetId ? (contentTypeByAssetId[item.assetId] || "").startsWith("video/") : false;
 
   return (
     <div className="inbox-item" style={isLast ? {} : { borderBottom: "1px solid var(--border)" }}>
       {item.assetId ? (
-        <img className="inbox-photo" src={`/asset/${item.assetId}`} alt="" />
+        isVideo ? (
+          <video className="inbox-photo" src={`/asset/${item.assetId}`} controls muted />
+        ) : (
+          <img className="inbox-photo" src={`/asset/${item.assetId}`} alt="" />
+        )
       ) : (
         <div
           className="inbox-photo"

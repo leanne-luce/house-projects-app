@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useRef, useTransition } from "react";
 import { money, num } from "@/lib/format";
 import { actualCost, estimatedSpendFor } from "@/lib/derived";
+import { estimateCost } from "@/lib/cost-estimator";
 import {
   updateDetail,
   deleteDetail,
@@ -134,6 +135,7 @@ export function DetailPageClient({
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const overrideInputRef = useRef<HTMLInputElement>(null);
   const house = houses.find((h) => h.id === detail.houseId);
   const room = detail.roomId ? rooms.find((r) => r.id === detail.roomId) : null;
   const roomsOfHouse = rooms.filter((r) => r.houseId === detail.houseId);
@@ -221,6 +223,7 @@ export function DetailPageClient({
           <div className="db-bar-row" style={{ alignItems: "center" }}>
             <span className="db-bar-label">Override</span>
             <input
+              ref={overrideInputRef}
               type="number"
               min={0}
               step="any"
@@ -232,6 +235,25 @@ export function DetailPageClient({
                 )
               }
             />
+            <button
+              type="button"
+              className="link-btn"
+              style={{ fontSize: "0.72rem", textDecoration: "none" }}
+              title="Fill in a rough ballpark cost based on the detail's name — a heuristic guess, not a quote"
+              onClick={() => {
+                const guess = estimateCost(detail.name);
+                if (guess === null) {
+                  alert(
+                    `No rough estimate on file for "${detail.name}" yet — try a more common material/room keyword, or just enter a number by hand.`
+                  );
+                  return;
+                }
+                if (overrideInputRef.current) overrideInputRef.current.value = String(guess);
+                startTransition(() => updateDetail(detail.id, { estimatedSpend: String(guess) }));
+              }}
+            >
+              ✨ Estimate
+            </button>
             <span
               className="db-bar-value"
               style={{ color: overBudget ? "var(--danger)" : "var(--text-muted)" }}
@@ -282,7 +304,13 @@ export function DetailPageClient({
             {filedInbox.map((it) => (
               <div className="list-item" key={it.id}>
                 <div className="list-item-main">
-                  {it.assetId ? <img className="receipt-thumb" src={`/asset/${it.assetId}`} alt="" /> : null}{" "}
+                  {it.assetId ? (
+                    (contentTypeByAssetId[it.assetId] || "").startsWith("video/") ? (
+                      <video className="receipt-thumb" src={`/asset/${it.assetId}`} controls muted />
+                    ) : (
+                      <img className="receipt-thumb" src={`/asset/${it.assetId}`} alt="" />
+                    )
+                  ) : null}{" "}
                   {it.text}
                 </div>
               </div>

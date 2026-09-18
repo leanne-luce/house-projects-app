@@ -3,13 +3,14 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
-import { money } from "@/lib/format";
+import { money, num, fmtTimeframe, budgetDeltaLabel } from "@/lib/format";
 import {
   detailsDirectOnHouse,
   detailsForRoom,
   houseRollup,
   roomRollup,
-  roughCost,
+  detailsRollup,
+  estimatedSpendFor,
   actualCost,
 } from "@/lib/derived";
 import {
@@ -58,10 +59,10 @@ export function HouseTree({
   const [expanded, setExpanded] = useState<Set<string>>(new Set(houses.map((h) => h.id)));
   // Rooms are collapsible too, independent of the house they're in — keyed
   // by room id, with a synthetic `${houseId}:none` key for the "not in a
-  // specific room" bucket. Expanded by default, same as houses.
-  const [expandedRooms, setExpandedRooms] = useState<Set<string>>(
-    () => new Set([...rooms.map((r) => r.id), ...houses.map((h) => `${h.id}:none`)])
-  );
+  // specific room" bucket. Collapsed by default (unlike houses) — with a
+  // dozen-plus rooms per house, starting everything open made the page a
+  // long scroll before you'd even picked what to look at.
+  const [expandedRooms, setExpandedRooms] = useState<Set<string>>(() => new Set());
   const [modal, setModal] = useState<ModalState>(null);
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -132,23 +133,65 @@ export function HouseTree({
                       }
                     }}
                   />
-                  <input
-                    className="house-address-input"
-                    defaultValue={h.address || ""}
-                    placeholder="Address (optional)"
-                    onClick={(e) => e.stopPropagation()}
-                    onBlur={(e) => {
-                      if (e.target.value !== (h.address || "")) {
-                        startTransition(() => updateHouse(h.id, { address: e.target.value || null }));
-                      }
-                    }}
-                  />
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <input
+                      className="house-address-input"
+                      defaultValue={h.address || ""}
+                      placeholder="Address (optional)"
+                      style={{ flex: 1, minWidth: 0, textOverflow: "ellipsis" }}
+                      onClick={(e) => e.stopPropagation()}
+                      onBlur={(e) => {
+                        if (e.target.value !== (h.address || "")) {
+                          startTransition(() => updateHouse(h.id, { address: e.target.value || null }));
+                        }
+                      }}
+                    />
+                    <input
+                      className="house-address-input"
+                      type="number"
+                      min={0}
+                      step="any"
+                      defaultValue={h.purchasePrice || ""}
+                      placeholder="Purchase price"
+                      style={{
+                        maxWidth: "8rem",
+                        flexShrink: 0,
+                        borderLeft: "1px solid var(--border)",
+                        paddingLeft: "0.5rem",
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      onBlur={(e) => {
+                        if (e.target.value !== (h.purchasePrice || "")) {
+                          startTransition(() =>
+                            updateHouse(h.id, { purchasePrice: e.target.value === "" ? null : e.target.value })
+                          );
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="house-stats">
                 {rollup.count} detail{rollup.count === 1 ? "" : "s"}
                 <br />
-                {money(rollup.actual)} spent{rollup.rough ? ` · ${money(rollup.rough)} planned` : ""}
+                {money(rollup.actual)} spent{rollup.rough ? ` / ${money(rollup.rough)} planned` : ""}
+                {(() => {
+                  const delta = budgetDeltaLabel(rollup.actual, rollup.rough);
+                  return delta ? (
+                    <span style={{ color: delta.over ? "var(--danger)" : "var(--text-muted)", fontWeight: 700 }}>
+                      {" "}
+                      · {delta.text}
+                    </span>
+                  ) : null;
+                })()}
+                {h.purchasePrice ? (
+                  <>
+                    <br />
+                    <span style={{ color: "var(--accent-strong)" }}>
+                      All-in: {money(num(h.purchasePrice) + rollup.actual)}
+                    </span>
+                  </>
+                ) : null}
               </div>
             </div>
 
@@ -184,15 +227,18 @@ export function HouseTree({
                         }}
                       >
                         {ds.length ? (
-                          ds.map((d) => (
-                            <DetailRow
-                              key={d.id}
-                              detail={d}
-                              rough={roughCost(materialItems, d.id)}
-                              actual={actualCost(lineItems, d.id)}
-                              onOpen={() => router.push(`/detail/${d.id}`)}
-                            />
-                          ))
+                          ds.map((d) => {
+                            const act = actualCost(lineItems, d.id);
+                            return (
+                              <DetailRow
+                                key={d.id}
+                                detail={d}
+                                rough={estimatedSpendFor(d, materialItems, act)}
+                                actual={act}
+                                onOpen={() => router.push(`/detail/${d.id}`)}
+                              />
+                            );
+                          })
                         ) : (
                           <div className="empty-note">No details yet.</div>
                         )}
@@ -210,25 +256,23 @@ export function HouseTree({
 
                   <RoomCard
                     title={<span className="room-name">{houseRooms.length ? "Not in a specific room" : "Details"}</span>}
-                    rollup={{
-                      count: directDetails.length,
-                      rough: directDetails.reduce((s, d) => s + roughCost(materialItems, d.id), 0),
-                      actual: directDetails.reduce((s, d) => s + actualCost(lineItems, d.id), 0),
-                      counts: statusCounts(directDetails),
-                    }}
+                    rollup={detailsRollup(directDetails, materialItems, lineItems)}
                     open={expandedRooms.has(`${h.id}:none`)}
                     onToggle={() => toggleRoom(`${h.id}:none`)}
                   >
                     {directDetails.length ? (
-                      directDetails.map((d) => (
-                        <DetailRow
-                          key={d.id}
-                          detail={d}
-                          rough={roughCost(materialItems, d.id)}
-                          actual={actualCost(lineItems, d.id)}
-                          onOpen={() => router.push(`/detail/${d.id}`)}
-                        />
-                      ))
+                      directDetails.map((d) => {
+                        const act = actualCost(lineItems, d.id);
+                        return (
+                          <DetailRow
+                            key={d.id}
+                            detail={d}
+                            rough={estimatedSpendFor(d, materialItems, act)}
+                            actual={act}
+                            onOpen={() => router.push(`/detail/${d.id}`)}
+                          />
+                        );
+                      })
                     ) : (
                       <div className="empty-note">
                         {houseRooms.length ? "Nothing loose here." : "No details yet."}
@@ -285,15 +329,6 @@ export function HouseTree({
   );
 }
 
-function statusCounts(ds: Detail[]): Record<string, number> {
-  const counts: Record<string, number> = { not_started: 0, in_progress: 0, done: 0, on_hold: 0 };
-  for (const d of ds) {
-    const key = d.status || "not_started";
-    counts[key] = (counts[key] || 0) + 1;
-  }
-  return counts;
-}
-
 const STATUS_ORDER = ["not_started", "in_progress", "on_hold", "done"] as const;
 
 function RoomCard({
@@ -305,14 +340,24 @@ function RoomCard({
   children,
 }: {
   title: React.ReactNode;
-  rollup: { count: number; rough: number; actual: number; counts: Record<string, number> };
+  rollup: {
+    count: number;
+    rough: number;
+    actual: number;
+    over: number;
+    remaining: number;
+    done: number;
+    counts: Record<string, number>;
+  };
   open: boolean;
   onToggle: () => void;
   onDelete?: () => void;
   children: React.ReactNode;
 }) {
+  const delta = budgetDeltaLabel(rollup.actual, rollup.rough);
+  const donePct = rollup.count ? Math.round((rollup.done / rollup.count) * 100) : 0;
   return (
-    <div className="room-card">
+    <div className={`room-card ${open ? "open" : ""}`}>
       <div className="room-card-head" onClick={onToggle}>
         <span className={`chev ${open ? "open" : ""}`}>▸</span>
         <div className="room-card-title">
@@ -320,6 +365,12 @@ function RoomCard({
           <div className="room-card-stats">
             {rollup.count} detail{rollup.count === 1 ? "" : "s"} · {money(rollup.actual)}
             {rollup.rough ? ` / ${money(rollup.rough)}` : ""}
+            {delta ? (
+              <span style={{ color: delta.over ? "var(--danger)" : "var(--text-muted)", fontWeight: 700 }}>
+                {" "}
+                · {delta.text}
+              </span>
+            ) : null}
           </div>
           {/* Always rendered (even with zero details, where it shows as a
               plain --border-colored line) so every collapsed room card in a
@@ -335,6 +386,12 @@ function RoomCard({
                 />
               ) : null
             )}
+          </div>
+          <div className="room-progress-row">
+            <div className="room-progress-track">
+              <div className="room-progress-fill" style={{ width: `${donePct}%` }} />
+            </div>
+            <span className="room-progress-pct">{donePct}%</span>
           </div>
         </div>
         {onDelete ? (
@@ -366,11 +423,7 @@ function DetailRow({
   actual: number;
   onOpen: () => void;
 }) {
-  const tf = detail.timeframeGranularity
-    ? `${detail.timeframeGranularity[0].toUpperCase()}${detail.timeframeGranularity.slice(1)}: ${
-        detail.timeframeValue || "—"
-      }`
-    : "";
+  const tf = fmtTimeframe(detail.timeframeGranularity, detail.timeframeValue);
   return (
     <div className="detail-row" onClick={onOpen}>
       <div>

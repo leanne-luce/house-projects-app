@@ -39,6 +39,10 @@ export const houses = pgTable("houses", {
   name: text("name").notNull(),
   address: text("address"),
   targetBudget: numeric("target_budget"),
+  // DEVIATION (addition, not in build brief section 6): what the house cost
+  // to buy, added on request so the app can show an "all-in" figure
+  // (purchase price + project spend), not just renovation spend on its own.
+  purchasePrice: numeric("purchase_price"),
   createdAt: createdAt(),
 });
 
