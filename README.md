@@ -98,6 +98,19 @@ Since Phase 4, four more receipt refinements were added:
   flows automatically into the LineItem created when one of its items gets
   assigned, so it doesn't need retyping per item.
 
+One more OCR fix: receipt line-item extraction only handled classic
+single-line-per-item receipts (description and price on the same line).
+Tested against a real emailed Lowe's PDF receipt and found it extracted
+zero real items — that receipt's format spreads each item across four
+lines (name / qty / item+model numbers / "Unit Price: $X | Subtotal: $Y"),
+which the original heuristic can't see, plus two false positives leaked in
+from a "Payment $47.00" / "Card Transaction Amount $47.00" section it had
+no way to distinguish from a purchased item. `src/lib/ocr.ts` now runs a
+second structured-block heuristic alongside the original one, and the
+skip-word list was extended to exclude payment-processing lines. Verified
+by reconstructing the real receipt's exact structure as a test PDF (not
+guessed at) before and after the fix.
+
 Phase 5 (Overview dashboard) is next.
 
 ## Scripts

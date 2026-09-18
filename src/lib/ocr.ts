@@ -72,31 +72,85 @@ export async function extractPdfText(pdfBuffer: Buffer): Promise<{ text: string 
   }
 }
 
-// Heuristic line-item extraction, ported verbatim from the prototype's
-// parseReceiptLines: looks for a trailing price on a line, skips
-// subtotal/tax/card-number/etc lines. Same limitations as the prototype
-// called out — imperfect, review what it finds, manual add-by-hand always
-// available as a fallback.
+// Two line-item extraction strategies, run together and merged, since real
+// receipts come in two genuinely different shapes:
+//
+// 1. Classic single-line-per-item (a photographed thermal receipt):
+//    "1x6x8 CEDAR BOARD       24.99" — description and price on one line.
+//    This is the prototype's original parseReceiptLines heuristic, ported
+//    verbatim: look for a trailing price, skip subtotal/tax/card lines.
+//
+// 2. Structured multi-line blocks (an emailed order-confirmation PDF, e.g.
+//    a real Lowe's receipt tested against while building this): item name
+//    and price can be 3-4 lines apart, e.g.
+//      5/4-6-8 SMOOTH CEDAR KD D QTY
+//      5
+//      Item #: 430691 | Model #: 5/4X6X8 TOP CHOICE KD S4S
+//      Unit Price: $18.88 | Subtotal: $94.40
+//    Strategy 1 alone finds nothing here — the price-bearing line contains
+//    the word "subtotal" and gets skipped outright, and every other line
+//    in the block has no trailing price at all. Verified against a
+//    reconstruction of a real receipt that came back completely empty
+//    before this was added (0 of 4 real items, plus 2 false positives from
+//    a "Payment $47.00" / "Card Transaction Amount $47.00" section that
+//    strategy 1 alone had no way to distinguish from a purchased item).
+//
+// Both are best-effort heuristics, not a receipt parser — imperfect,
+// review what's found, manual add-by-hand always available.
+
 const PRICE_RE = /(\d{1,4}\.\d{2})\s*$/;
 const SKIP_WORDS_RE =
-  /subtotal|^total|grand total|\btax\b|change due|cash|visa|mastercard|amex|discover|debit|credit|balance|tender|approved|auth\s*code|card\s*#|thank you|store\s*#|receipt\s*#/i;
+  /subtotal|^total|grand total|\btax\b|change due|cash|visa|mastercard|amex|discover|debit|credit|balance|tender|approved|auth\s*code|card\s*#|thank you|store\s*#|receipt\s*#|\bpayment\b|card transaction/i;
 
-export function parseReceiptLines(text: string): { description: string; amount: number }[] {
-  const lines = (text || "")
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
+function parseSingleLineItems(lines: string[]): { description: string; amount: number }[] {
   const items: { description: string; amount: number }[] = [];
-
   for (const line of lines) {
     if (SKIP_WORDS_RE.test(line)) continue;
     const m = line.match(PRICE_RE);
     if (!m) continue;
     const amount = parseFloat(m[1]);
     if (!(amount > 0 && amount < 5000)) continue;
-    let description = line.slice(0, m.index).replace(/[-–—.\s]+$/, "").trim();
+    let description = line.slice(0, m.index).replace(/[-–—.:$\s]+$/, "").trim();
     if (!description || description.length < 2) description = "Item";
     items.push({ description, amount });
   }
   return items;
+}
+
+// A per-item "Subtotal:" (colon required) is the anchor — deliberately
+// distinct from a receipt-level "Subtotal $188.16" or "Subtotal $ 188.21"
+// (no colon in the real example this was built against), which stay
+// correctly excluded. From that line, walk backward past the "Item
+// #:"/"Model #:" line and the bare quantity-number line to find the item
+// name line, stripping a trailing "QTY" layout artifact if present.
+const ITEM_SUBTOTAL_RE = /subtotal\s*:\s*\$?([\d,]+\.\d{2})/i;
+const SKIP_FOR_BLOCK_NAME_RE = /^item\s*#|^qty$|^\d+$/i;
+
+function parseStructuredBlocks(lines: string[]): { description: string; amount: number }[] {
+  const items: { description: string; amount: number }[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(ITEM_SUBTOTAL_RE);
+    if (!m) continue;
+    const amount = parseFloat(m[1].replace(/,/g, ""));
+    if (!(amount > 0 && amount < 5000)) continue;
+
+    let description = "Item";
+    for (let j = i - 1; j >= Math.max(0, i - 4); j--) {
+      const candidate = lines[j].trim();
+      if (!candidate || SKIP_FOR_BLOCK_NAME_RE.test(candidate)) continue;
+      description = candidate.replace(/\bqty\b\s*$/i, "").trim();
+      break;
+    }
+    if (description.length < 2) description = "Item";
+    items.push({ description, amount });
+  }
+  return items;
+}
+
+export function parseReceiptLines(text: string): { description: string; amount: number }[] {
+  const lines = (text || "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  return [...parseStructuredBlocks(lines), ...parseSingleLineItems(lines)];
 }
