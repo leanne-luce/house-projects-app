@@ -449,8 +449,10 @@ export async function uploadReceipt(
   formData: FormData
 ): Promise<{ id: string } | { duplicate: true; uploadedAt: string | null } | { error: string }> {
   const file = formData.get("file") as File | null;
+  const houseId = String(formData.get("houseId") || "");
   const force = formData.get("force") === "true";
   if (!file || file.size === 0) return { error: "No file provided." };
+  if (!houseId) return { error: "No house selected." };
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const hash = sha256(buffer);
@@ -467,7 +469,7 @@ export async function uploadReceipt(
   const [assetRow] = await db.insert(assets).values(saved).returning();
   const [receiptRow] = await db
     .insert(receipts)
-    .values({ assetId: assetRow.id, imageHash: hash, status: "new" })
+    .values({ assetId: assetRow.id, houseId, imageHash: hash, status: "new" })
     .returning();
 
   await extractAndStoreLineItems(receiptRow.id, buffer, contentType);

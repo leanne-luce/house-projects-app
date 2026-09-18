@@ -489,7 +489,7 @@ function SpendPanel({ detailId, lines }: { detailId: string; lines: LineItem[] }
                   min={0}
                   step="any"
                   defaultValue={l.cost}
-                  style={{ width: "4.2rem", padding: "0.1rem 0.3rem" }}
+                  style={{ width: "5.5rem", padding: "0.1rem 0.3rem" }}
                   onBlur={(e) => startTransition(() => updateLineItem(l.id, { cost: e.target.value }))}
                 />
                 <input

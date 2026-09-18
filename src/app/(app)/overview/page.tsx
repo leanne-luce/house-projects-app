@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { getOverviewData } from "@/lib/queries";
-import { actualCost, estimatedSpendFor, hasRealBudget, detailPath } from "@/lib/derived";
+import { actualCost, estimatedSpendFor, hasRealBudget, roomPath } from "@/lib/derived";
 import { money, num, fmtTimeframe } from "@/lib/format";
+import { HouseSwitcher } from "@/components/house-switcher";
 
 export const dynamic = "force-dynamic";
 
@@ -13,21 +14,43 @@ const STATUS_LABEL: Record<string, string> = {
   on_hold: "On hold",
 };
 
-export default async function OverviewPage() {
-  const { houses, rooms, details, materialItems, lineItems, inboxItems } = await getOverviewData();
+export default async function OverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ house?: string }>;
+}) {
+  const { houses, rooms: allRooms, details: allDetails, materialItems, lineItems } = await getOverviewData();
 
-  if (!details.length) {
+  if (!houses.length) {
     return (
       <div className="empty-state">
         <div className="big-emoji">📊</div>
-        Nothing to show yet — add a house and a few details to see spend, budget, and sourcing at a
-        glance.
+        Add a house first — Overview shows spend, budget, and sourcing per house.
       </div>
     );
   }
 
+  const { house: houseParam } = await searchParams;
+  const activeHouseId = houses.some((h) => h.id === houseParam) ? houseParam! : houses[0].id;
+  const activeHouse = houses.find((h) => h.id === activeHouseId)!;
+  const rooms = allRooms.filter((r) => r.houseId === activeHouseId);
+  const details = allDetails.filter((d) => d.houseId === activeHouseId);
+
+  const switcher = <HouseSwitcher houses={houses} activeHouseId={activeHouseId} basePath="/overview" />;
+
+  if (!details.length) {
+    return (
+      <>
+        {switcher}
+        <div className="empty-state">
+          <div className="big-emoji">📊</div>
+          No details in {activeHouse.name} yet — add a few to see spend, budget, and sourcing at a glance.
+        </div>
+      </>
+    );
+  }
+
   const activeCount = details.filter((d) => d.status === "in_progress").length;
-  const unfiledInbox = inboxItems.filter((i) => !i.filedTo).length;
 
   let totalSpent = 0;
   let totalProjected = 0;
@@ -65,10 +88,11 @@ export default async function OverviewPage() {
     })
     .slice(0, 6);
 
-  const purchasePriceTotal = houses.reduce((s, h) => s + num(h.purchasePrice), 0);
+  const purchasePrice = num(activeHouse.purchasePrice);
 
   return (
     <>
+      {switcher}
       <div className="ov-stats">
         <div className="ov-stat">
           <div className="ov-stat-num">{activeCount}</div>
@@ -93,22 +117,18 @@ export default async function OverviewPage() {
           <div className="ov-stat-label">Left to spend (budgeted)</div>
         </div>
         <div className="ov-stat">
-          <div className="ov-stat-num">{unfiledInbox}</div>
-          <div className="ov-stat-label">Unfiled inbox</div>
-        </div>
-        <div className="ov-stat">
           <div className="ov-stat-num">{needsSourcing.length}</div>
           <div className="ov-stat-label">Need sourcing</div>
         </div>
       </div>
 
-      {purchasePriceTotal ? (
+      {purchasePrice ? (
         <div className="panel-card" style={{ marginBottom: "1rem" }}>
-          <h4>🏡 All-in value</h4>
+          <h4>🏡 All-in value — {activeHouse.name}</h4>
           <div className="totals-strip">
             <div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Purchase price(s)</div>
-              <div style={{ fontWeight: 700 }}>{money(purchasePriceTotal)}</div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Purchase price</div>
+              <div style={{ fontWeight: 700 }}>{money(purchasePrice)}</div>
             </div>
             <div>
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>+ Spent on projects</div>
@@ -117,13 +137,13 @@ export default async function OverviewPage() {
             <div>
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>All-in so far</div>
               <div style={{ fontWeight: 800, color: "var(--accent-strong)" }}>
-                {money(purchasePriceTotal + totalSpent)}
+                {money(purchasePrice + totalSpent)}
               </div>
             </div>
             <div>
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>All-in if fully spent as planned</div>
               <div style={{ fontWeight: 800, color: "var(--accent-strong)" }}>
-                {money(purchasePriceTotal + totalProjected)}
+                {money(purchasePrice + totalProjected)}
               </div>
             </div>
           </div>
@@ -141,10 +161,7 @@ export default async function OverviewPage() {
                 className="list-item"
                 style={{ textDecoration: "none", color: "inherit" }}
               >
-                <div className="list-item-main">
-                  {detail.name}
-                  <div className="list-item-sub">{detailPath(houses, rooms, detail)}</div>
-                </div>
+                <div className="list-item-main">{roomPath(rooms, detail)}</div>
                 <div style={{ color: "var(--danger)", fontWeight: 700, fontSize: "0.85rem", flexShrink: 0 }}>
                   {money(act)} / {money(est)}
                 </div>
@@ -167,7 +184,7 @@ export default async function OverviewPage() {
               >
                 <div className="list-item-main">
                   {material.description}
-                  <div className="list-item-sub">{detailPath(houses, rooms, detail)}</div>
+                  <div className="list-item-sub">{roomPath(rooms, detail)}</div>
                 </div>
               </Link>
             ))
@@ -186,10 +203,7 @@ export default async function OverviewPage() {
                 className="list-item"
                 style={{ textDecoration: "none", color: "inherit" }}
               >
-                <div className="list-item-main">
-                  {d.name}
-                  <div className="list-item-sub">{detailPath(houses, rooms, d)}</div>
-                </div>
+                <div className="list-item-main">{roomPath(rooms, d)}</div>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
                   <span className={`status-pill status-${d.status || "not_started"}`}>
                     {STATUS_LABEL[d.status || "not_started"]}

@@ -103,3 +103,15 @@ export function detailPath(allHouses: House[], allRooms: Room[], detail: Detail 
   const r = detail.roomId ? allRooms.find((x) => x.id === detail.roomId) : null;
   return [h ? h.name : "?", r ? r.name : null, detail.name].filter(Boolean).join(" / ");
 }
+
+// Same as detailPath, minus the house name — for the now-per-house pages
+// (Receipts, Lookbook, Overview) where the house is already established by
+// the page's own house switcher, so repeating it on every row is noise.
+export function roomPath(
+  allRooms: Room[],
+  detail: Pick<Detail, "roomId" | "name"> | null | undefined
+): string {
+  if (!detail) return "—";
+  const r = detail.roomId ? allRooms.find((x) => x.id === detail.roomId) : null;
+  return [r ? r.name : null, detail.name].filter(Boolean).join(" / ");
+}

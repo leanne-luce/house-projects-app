@@ -216,6 +216,14 @@ export const receipts = pgTable(
     assetId: text("asset_id")
       .notNull()
       .references(() => assets.id),
+    // DEVIATION (addition, not in build brief section 6): which house this
+    // receipt was uploaded for, added on request so Receipts can be a
+    // per-house view — chosen at upload time (whichever house's Receipts
+    // tab you're on), not inferred from assigned items, since a fresh
+    // upload has no assigned items yet to infer from.
+    houseId: text("house_id")
+      .notNull()
+      .references(() => houses.id),
     uploadedAt: createdAt(),
     imageHash: text("image_hash"),
     status: text("status").notNull().default("new"),

@@ -116,22 +116,19 @@ export async function getHorizonData() {
 }
 
 export async function getOverviewData() {
-  const [housesRows, roomsRows, detailsRows, materialsRows, lineItemsRows, inboxRows] =
-    await Promise.all([
-      db.select().from(houses).orderBy(asc(houses.createdAt)),
-      db.select().from(rooms).orderBy(asc(rooms.createdAt)),
-      db.select().from(details).orderBy(asc(details.createdAt)),
-      db.select().from(materialItems),
-      db.select().from(lineItems),
-      db.select().from(inboxItems),
-    ]);
+  const [housesRows, roomsRows, detailsRows, materialsRows, lineItemsRows] = await Promise.all([
+    db.select().from(houses).orderBy(asc(houses.createdAt)),
+    db.select().from(rooms).orderBy(asc(rooms.createdAt)),
+    db.select().from(details).orderBy(asc(details.createdAt)),
+    db.select().from(materialItems),
+    db.select().from(lineItems),
+  ]);
   return {
     houses: housesRows,
     rooms: roomsRows,
     details: detailsRows,
     materialItems: materialsRows,
     lineItems: lineItemsRows,
-    inboxItems: inboxRows,
   };
 }
 

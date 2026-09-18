@@ -89,17 +89,27 @@
     border-bottom: 1px solid var(--border);
     margin-bottom: 1rem;
   }
-  header.top h1 { font-size: 1.15rem; margin:0; font-weight:700; letter-spacing:-0.01em; }
+  header.top h1 { font-size: 1.15rem; margin:0; font-weight:700; letter-spacing:-0.01em; flex-shrink:0; white-space:nowrap; }
   header.top h1 span.house-emoji { margin-right:0.4rem; }
   /* Site title only — Syne, not the global body font. */
   .site-title { font-family: var(--font-syne), sans-serif; font-weight: 700; letter-spacing: -0.01em; }
-  nav.tabs { display:flex; gap:0.25rem; background:var(--surface-2); padding:0.25rem; border-radius: 999px; overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
+  nav.tabs { display:flex; gap:0.25rem; background:var(--surface-2); padding:0.25rem; border-radius: 999px; overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; min-width:0; }
   nav.tabs::-webkit-scrollbar { display:none; }
   nav.tabs a {
     border:none; background:transparent; color:var(--text-muted); font-size:0.85rem; font-weight:600;
     padding:0.45rem 0.85rem; border-radius:999px; cursor:pointer; white-space:nowrap;
   }
   nav.tabs a.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
+  /* House switcher — secondary sub-nav for the per-house pages (Receipts,
+     Lookbook, Overview). Outlined pills rather than nav.tabs's filled
+     track, so the two navs read as "level 1 / level 2", not duplicates. */
+  .house-tabs { display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1rem; }
+  .house-tabs a {
+    border:1px solid var(--border); background:var(--surface); color:var(--text-muted);
+    font-size:0.82rem; font-weight:600; padding:0.35rem 0.8rem; border-radius:999px;
+    text-decoration:none; white-space:nowrap;
+  }
+  .house-tabs a.active { border-color:var(--accent-strong); background:var(--accent-soft); color:var(--accent-strong); }
   .badge-count {
     display:inline-block; min-width:1.1rem; padding:0 0.3rem; margin-left:0.3rem;
     background:var(--accent); color:var(--surface); border-radius:999px; font-size:0.68rem; line-height:1.1rem; text-align:center;
@@ -137,13 +147,13 @@
 
   /* House tree */
   .house-card { margin-bottom:0.9rem; }
-  .house-head { display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1rem; cursor:pointer; gap:0.6rem; }
-  .house-title { display:flex; align-items:center; gap:0.6rem; min-width:0; }
+  .house-head { display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1rem; cursor:pointer; gap:0.6rem; flex-wrap:wrap; }
+  .house-title { display:flex; align-items:center; gap:0.6rem; min-width:0; flex:1 1 20rem; max-width:20rem; }
   .house-title .chev { color:var(--text-faint); transition:transform .15s; flex-shrink:0; }
   .house-title .chev.open { transform:rotate(90deg); }
   .house-name { font-weight:700; font-size:1rem; }
   .house-address { font-size:0.78rem; color:var(--text-faint); }
-  .house-stats { font-size:0.78rem; color:var(--text-muted); text-align:right; flex-shrink:0; }
+  .house-stats { font-size:0.78rem; color:var(--text-muted); text-align:right; flex:0 1 auto; min-width:9rem; }
   .house-body { padding: 0 1rem 1rem; border-top:1px solid var(--border); }
   .room-block { margin-top:0.8rem; }
   .room-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem; }
@@ -225,6 +235,16 @@
   .inline-add-form { display:flex; gap:0.4rem; margin-top:0.4rem; flex-wrap:wrap; }
   .inline-add-form input, .inline-add-form select { flex:1; min-width:6rem; }
   .receipt-thumb { width:2.2rem; height:2.2rem; border-radius:6px; object-fit:cover; border:1px solid var(--border); }
+  /* Collapsible receipt cards */
+  .receipt-card-head { display:flex; align-items:center; gap:0.7rem; padding:0.8rem 0.9rem; cursor:pointer; }
+  .receipt-card-head .chev { flex-shrink:0; font-size:0.85rem; color:var(--text-faint); }
+  .receipt-thumb-box {
+    width:3.4rem; height:3.4rem; object-fit:cover; border-radius:8px; border:1px solid var(--border);
+    flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.3rem;
+    background:var(--surface-2); text-decoration:none;
+  }
+  .receipt-card-stats { font-size:0.76rem; color:var(--text-muted); margin-top:0.15rem; }
+  .receipt-card-body { padding:0 0.9rem 0.9rem; border-top:1px solid var(--border); padding-top:0.7rem; }
   .move-row { display:flex; gap:0.5rem; }
   .move-row select { flex:1; }
   .danger-zone { border-top:1px solid var(--border); padding-top:0.8rem; margin-top:1.3rem; }
@@ -304,7 +324,7 @@
   .db-hero-meta select, .db-hero-meta input { width:auto; font-size:0.82rem; padding:0.35rem 0.6rem; }
   .db-status-select { font-weight:700; }
   .db-budget { margin-top:1.15rem; display:flex; flex-direction:column; gap:0.55rem; background:rgba(157,139,94,0.07); border-radius:var(--radius-sm); padding:0.75rem 0.85rem; }
-  .db-bar-row { display:flex; align-items:center; gap:0.6rem; }
+  .db-bar-row { display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; }
   .db-bar-label { width:5.2rem; font-size:0.76rem; color:var(--text-muted); flex-shrink:0; }
   .db-bar-track { flex:1; height:0.6rem; background:var(--surface-2); border-radius:999px; overflow:hidden; border:1px solid var(--border); }
   .db-bar-fill { height:100%; border-radius:999px; transition:width .35s ease; }
@@ -327,7 +347,7 @@
   /* Overview */
   .ov-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(7rem,1fr)); gap:0.7rem; margin-bottom:1rem; }
   .ov-stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:0.8rem; text-align:center; box-shadow:var(--shadow); }
-  .ov-stat-num { font-size:1.25rem; font-weight:800; color:var(--accent-strong); white-space:nowrap; }
+  .ov-stat-num { font-size:1.2rem; font-weight:800; color:var(--accent-strong); overflow-wrap:break-word; }
   .ov-stat-label { font-size:0.72rem; color:var(--text-muted); margin-top:0.15rem; }
 
   /* Editable house/room fields */
@@ -363,8 +383,6 @@
   .progress-file { width:100%; font-size:0.66rem; margin-top:0.15rem; }
 
   /* Look book */
-  .lookbook-house { font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.03em; margin:1.4rem 0 0.6rem; }
-  .lookbook-house:first-child { margin-top:0; }
   .lookbook-card { margin-bottom:0.9rem; padding:1rem; }
   .lookbook-card-head { display:flex; align-items:baseline; justify-content:space-between; gap:0.6rem; margin-bottom:0.8rem; text-decoration:none; color:inherit; }
   .lookbook-card-head:hover .lookbook-name { text-decoration:underline; }

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { money, fmtDate } from "@/lib/format";
-import { detailPath } from "@/lib/derived";
+import { roomPath } from "@/lib/derived";
 import { PhotoPickerButton } from "@/components/photo-picker-button";
 import {
   uploadReceipt,
@@ -19,44 +19,42 @@ import type {
   receipts as receiptsTable,
   receiptLineItems as receiptLineItemsTable,
   details as detailsTable,
-  houses as housesTable,
   rooms as roomsTable,
 } from "@/db/schema";
 
 type Receipt = typeof receiptsTable.$inferSelect;
 type ReceiptLineItem = typeof receiptLineItemsTable.$inferSelect;
 type Detail = typeof detailsTable.$inferSelect;
-type House = typeof housesTable.$inferSelect;
 type Room = typeof roomsTable.$inferSelect;
 
 const STATUS_LABEL: Record<string, string> = { new: "New", processing: "Scanning…", logged: "Logged" };
 
 export function ReceiptsList({
+  houseId,
   receipts,
   receiptLineItems,
   details,
-  houses,
   rooms,
   contentTypeByAssetId,
 }: {
+  houseId: string;
   receipts: Receipt[];
   receiptLineItems: ReceiptLineItem[];
   details: Detail[];
-  houses: House[];
   rooms: Room[];
   contentTypeByAssetId: Record<string, string | null>;
 }) {
   const sortedDetails = [...details].sort((a, b) =>
-    detailPath(houses, rooms, a).localeCompare(detailPath(houses, rooms, b))
+    roomPath(rooms, a).localeCompare(roomPath(rooms, b))
   );
 
   return (
     <>
-      <UploadForm />
+      <UploadForm houseId={houseId} />
       {!receipts.length ? (
         <div className="empty-state">
           <div className="big-emoji">🧾</div>
-          No receipts yet.
+          No receipts yet for this house.
         </div>
       ) : (
         receipts.map((r) => (
@@ -65,7 +63,6 @@ export function ReceiptsList({
             receipt={r}
             items={receiptLineItems.filter((i) => i.receiptId === r.id)}
             sortedDetails={sortedDetails}
-            houses={houses}
             rooms={rooms}
             isPdf={contentTypeByAssetId[r.assetId] === "application/pdf"}
           />
@@ -75,7 +72,7 @@ export function ReceiptsList({
   );
 }
 
-function UploadForm() {
+function UploadForm({ houseId }: { houseId: string }) {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -84,6 +81,7 @@ function UploadForm() {
     setUploading(true);
     const formData = new FormData();
     formData.set("file", pendingFile);
+    formData.set("houseId", houseId);
     if (force) formData.set("force", "true");
     const result = await uploadReceipt(formData);
     setUploading(false);
@@ -132,17 +130,19 @@ function ReceiptCard({
   receipt,
   items,
   sortedDetails,
-  houses,
   rooms,
   isPdf,
 }: {
   receipt: Receipt;
   items: ReceiptLineItem[];
   sortedDetails: Detail[];
-  houses: House[];
   rooms: Room[];
   isPdf: boolean;
 }) {
+  // Logged receipts are a settled record — collapsed by default so a long
+  // history doesn't bury the ones still needing attention (new/processing,
+  // or anything with pending items to review).
+  const [open, setOpen] = useState(() => receipt.status !== "logged");
   const [manualOpen, setManualOpen] = useState(false);
   const [rescanning, setRescanning] = useState(false);
   const [, startTransition] = useTransition();
@@ -153,36 +153,22 @@ function ReceiptCard({
     receipt.status === "logged" ? "status-done" : receipt.status === "processing" ? "status-in_progress" : "status-not_started";
 
   return (
-    <div className="card" style={{ marginBottom: "0.9rem" }}>
-      <div style={{ display: "flex", gap: "0.8rem", padding: "0.9rem" }}>
+    <div className="card receipt-card" style={{ marginBottom: "0.9rem" }}>
+      <div className="receipt-card-head" onClick={() => setOpen((v) => !v)}>
+        <span className={`chev ${open ? "open" : ""}`}>▸</span>
         {isPdf ? (
           <a
             href={`/asset/${receipt.assetId}`}
             target="_blank"
             rel="noopener noreferrer"
-            style={{
-              width: "4.5rem",
-              height: "4.5rem",
-              borderRadius: 8,
-              border: "1px solid var(--border)",
-              flexShrink: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "1.6rem",
-              background: "var(--surface-2)",
-              textDecoration: "none",
-            }}
+            className="receipt-thumb-box"
+            onClick={(e) => e.stopPropagation()}
             title="Open PDF"
           >
             📄
           </a>
         ) : (
-          <img
-            src={`/asset/${receipt.assetId}`}
-            style={{ width: "4.5rem", height: "4.5rem", objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)", flexShrink: 0 }}
-            alt=""
-          />
+          <img src={`/asset/${receipt.assetId}`} className="receipt-thumb-box" alt="" />
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
@@ -190,6 +176,7 @@ function ReceiptCard({
               defaultValue={receipt.vendor || ""}
               placeholder="Store / vendor"
               style={{ border: "none", background: "transparent", padding: "0.1rem 0", fontWeight: 600, fontSize: "0.85rem", flex: 1 }}
+              onClick={(e) => e.stopPropagation()}
               onBlur={(e) => {
                 if (e.target.value !== (receipt.vendor || "")) {
                   startTransition(() => updateReceiptVendor(receipt.id, e.target.value));
@@ -198,21 +185,23 @@ function ReceiptCard({
             />
             <span className={`status-pill ${statusClass}`}>{statusLabel}</span>
           </div>
-          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+          <div className="receipt-card-stats">
             {fmtDate(receipt.uploadedAt)}
-            {isPdf ? " · PDF" : ""}
-          </div>
-          <div style={{ fontSize: "0.78rem", color: "var(--text-faint)", marginTop: "0.15rem" }}>
+            {isPdf ? " · PDF" : ""} ·{" "}
             {items.length
-              ? `${items.length} item${items.length === 1 ? "" : "s"} found — ${pending.length} to review`
+              ? `${items.length} item${items.length === 1 ? "" : "s"} — ${pending.length} to review`
               : receipt.status === "processing"
-                ? "Scanning for line items…"
-                : "No items extracted yet"}
+                ? "scanning…"
+                : "no items extracted yet"}
           </div>
+        </div>
+      </div>
+      {open ? (
+        <div className="receipt-card-body">
           {receipt.ocrError ? (
-            <div style={{ fontSize: "0.74rem", color: "var(--warn)", marginTop: "0.2rem" }}>{receipt.ocrError}</div>
+            <div style={{ fontSize: "0.74rem", color: "var(--warn)", marginBottom: "0.5rem" }}>{receipt.ocrError}</div>
           ) : null}
-          <div style={{ marginTop: "0.4rem", display: "flex", gap: "0.7rem", flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "0.7rem", flexWrap: "wrap", alignItems: "center", marginBottom: "0.5rem" }}>
             <button
               className="link-btn"
               disabled={rescanning}
@@ -242,13 +231,13 @@ function ReceiptCard({
           <div className={`new-detail-inline ${manualOpen ? "open" : ""}`}>
             <ManualItemForm receiptId={receipt.id} onAdded={() => setManualOpen(false)} />
           </div>
-        </div>
-      </div>
-      {items.length ? (
-        <div style={{ padding: "0 0.9rem 0.9rem" }}>
-          {items.map((item) => (
-            <ReceiptLineItemRow key={item.id} item={item} sortedDetails={sortedDetails} houses={houses} rooms={rooms} />
-          ))}
+          {items.length ? (
+            <div style={{ marginTop: "0.5rem" }}>
+              {items.map((item) => (
+                <ReceiptLineItemRow key={item.id} item={item} sortedDetails={sortedDetails} rooms={rooms} />
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -314,12 +303,10 @@ function EditableReceiptFields({ item }: { item: ReceiptLineItem }) {
 function ReceiptLineItemRow({
   item,
   sortedDetails,
-  houses,
   rooms,
 }: {
   item: ReceiptLineItem;
   sortedDetails: Detail[];
-  houses: House[];
   rooms: Room[];
 }) {
   const [, startTransition] = useTransition();
@@ -331,7 +318,7 @@ function ReceiptLineItemRow({
         <div className="list-item-main">
           {item.description} — {money(item.amount)}{" "}
           <span style={{ fontSize: "0.7rem", color: "var(--good)" }}>
-            ✓ {assignedDetail ? detailPath(houses, rooms, assignedDetail) : ""}
+            ✓ {assignedDetail ? roomPath(rooms, assignedDetail) : ""}
           </span>
         </div>
       </div>
@@ -356,7 +343,7 @@ function ReceiptLineItemRow({
             <option value="">Assign to detail…</option>
             {sortedDetails.map((d) => (
               <option key={d.id} value={d.id}>
-                {detailPath(houses, rooms, d)}
+                {roomPath(rooms, d)}
               </option>
             ))}
           </select>
