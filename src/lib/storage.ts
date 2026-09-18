@@ -14,7 +14,13 @@ import crypto from "node:crypto";
 // BLOB_READ_WRITE_TOKEN set switches this to real Blob storage with no code
 // changes needed.
 
-const LOCAL_UPLOAD_DIR = path.join(process.cwd(), ".uploads");
+// Configurable so a test run can point at a completely separate folder from
+// real local usage (.uploads-test vs .uploads) — see PLAN.md's "Test/real
+// data isolation" section for why this exists: an incident where test
+// cleanup commands deleted real uploaded files because test and real data
+// shared one folder. Never hardcode ".uploads" elsewhere; always go through
+// this.
+const LOCAL_UPLOAD_DIR = path.join(process.cwd(), process.env.UPLOAD_DIR || ".uploads");
 
 async function saveBuffer(
   buffer: Buffer,

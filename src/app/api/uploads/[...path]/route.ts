@@ -6,7 +6,9 @@ import path from "node:path";
 // here in production). Sits behind the same passphrase gate as everything
 // else (src/proxy.ts's matcher covers /api routes too).
 
-const LOCAL_UPLOAD_DIR = path.join(process.cwd(), ".uploads");
+// Must match src/lib/storage.ts's LOCAL_UPLOAD_DIR exactly — same env var,
+// same default.
+const LOCAL_UPLOAD_DIR = path.join(process.cwd(), process.env.UPLOAD_DIR || ".uploads");
 
 export async function GET(_req: Request, { params }: { params: Promise<{ path: string[] }> }) {
   const { path: segments } = await params;

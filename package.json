@@ -9,7 +9,9 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:push:test": "drizzle-kit push --config drizzle.test.config.ts",
+    "dev:test": "NODE_ENV=test next dev -p 3311"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",

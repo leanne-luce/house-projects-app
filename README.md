@@ -133,9 +133,34 @@ Two more additions:
 
 Phase 5 (Overview dashboard) is next.
 
+## Testing, isolated from real data
+
+Never test against the real dev database or uploads folder — see PLAN.md's
+"Test/real data isolation" section for why (a past `rm -rf .uploads/*`
+test-cleanup command permanently deleted real uploaded files because test
+and real data shared one folder). Instead:
+
+1. One-time setup: `createdb house_projects_test`, then copy `.env.local` to
+   `.env.test.local` and change `DATABASE_URL` to point at
+   `house_projects_test` and add `UPLOAD_DIR=.uploads-test`.
+2. `npm run db:push:test` — pushes the schema to the test database only
+   (refuses to run if `DATABASE_URL` doesn't contain `_test`).
+3. `npm run dev:test` — runs the app against the test database/uploads
+   folder on port 3311, so it can run alongside the real `npm run dev`
+   server without conflicting.
+
+A committed Claude Code hook (`.claude/hooks/guard-real-data.mjs`, wired in
+`.claude/settings.json`) additionally hard-blocks the specific dangerous
+commands that caused the original incident — blanket deletes of the real
+`.uploads` folder, and `dropdb`/`DROP DATABASE`/`TRUNCATE`/unscoped `DELETE
+FROM` against `house_projects_dev` — regardless of which environment a
+session thinks it's in.
+
 ## Scripts
 
 - `npm run dev` / `npm run build` / `npm run start`
 - `npm run db:generate` — generate a Drizzle migration from schema changes
 - `npm run db:push` — push the current schema straight to the database (fine for solo development)
 - `npm run db:studio` — Drizzle Studio, a local DB browser
+- `npm run db:push:test` — push the schema to the isolated test database (`house_projects_test`)
+- `npm run dev:test` — run the app against the test database/uploads folder on port 3311

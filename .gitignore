@@ -40,8 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local Claude Code settings (not part of the app)
-.claude/
+# Claude Code settings: settings.json and hooks/ are project-wide safety
+# infrastructure (see PLAN.md's "Test/real data isolation" section) and are
+# tracked in git; settings.local.json is personal and stays ignored.
+.claude/settings.local.json
 
 # local dev file uploads (storage abstraction fallback, see src/lib/storage.ts)
 .uploads/
