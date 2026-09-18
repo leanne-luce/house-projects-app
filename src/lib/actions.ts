@@ -320,8 +320,11 @@ export async function addBoardImage(formData: FormData) {
   revalidateEverything();
 }
 
-export async function updateBoardImageNotes(id: string, notes: string) {
-  await db.update(boardImages).set({ notes }).where(eq(boardImages.id, id));
+export async function updateBoardImage(
+  id: string,
+  patch: Partial<{ notes: string; boardType: string }>
+) {
+  await db.update(boardImages).set(patch).where(eq(boardImages.id, id));
   revalidateEverything();
 }
 

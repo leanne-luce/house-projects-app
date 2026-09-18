@@ -299,6 +299,12 @@
   .board-thumb { width:100%; aspect-ratio:1; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--border); display:block; background:var(--surface-2); }
   .board-note { width:100%; font-size:0.7rem; margin-top:0.25rem; padding:0.2rem 0.35rem; }
   .board-del { position:absolute; top:0.25rem; right:0.25rem; background:rgba(20,16,8,0.6); color:#fff; border-radius:50%; width:1.4rem; height:1.4rem; display:flex; align-items:center; justify-content:center; font-size:0.75rem; }
+  .board-type-badge { position:absolute; top:0.25rem; left:0.25rem; background:rgba(20,16,8,0.65); color:#fff; border:none; border-radius:999px; font-size:0.62rem; font-weight:600; padding:0.15rem 0.45rem; cursor:pointer; white-space:nowrap; }
+  .board-type-badge:hover { background:rgba(20,16,8,0.85); }
+  .pin-picker-item { position:relative; cursor:pointer; }
+  .pin-picker-item .board-thumb { transition:opacity .15s, outline .15s; }
+  .pin-picker-check { position:absolute; top:0.25rem; right:0.25rem; width:1.3rem; height:1.3rem; border-radius:50%; background:rgba(20,16,8,0.55); color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.7rem; }
+  .pin-picker-item.selected .pin-picker-check { background:var(--accent-strong); }
 
   /* Color palette */
   .swatch-row { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.6rem; }

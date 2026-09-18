@@ -18,7 +18,7 @@ import {
   updateChecklistItem,
   deleteChecklistItem,
 } from "@/lib/actions";
-import { BoardPanel } from "./board-panel";
+import { ReferencesPanel } from "./references-panel";
 import { PalettePanel } from "./palette-panel";
 import { ProgressPhotosPanel } from "./progress-photos-panel";
 import type {
@@ -252,24 +252,13 @@ export function DetailPageClient({
         <SpendPanel detailId={detail.id} lines={lineItems} />
         <ChecklistPanel detailId={detail.id} items={checklistItems} />
 
-        <BoardPanel
+        <ReferencesPanel
           detailId={detail.id}
-          boardType="mood"
-          title="🎨 Mood board"
-          images={boardImages.filter((b) => b.boardType === "mood")}
-          emptyNote="No images yet — pull in whatever's shaping the vision for this."
+          images={boardImages}
           pinterestBoardUrl={detail.pinterestBoardUrl}
         />
 
         <PalettePanel detailId={detail.id} swatches={paletteSwatches} />
-
-        <BoardPanel
-          detailId={detail.id}
-          boardType="reference"
-          title="🔧 Reference & assembly"
-          images={boardImages.filter((b) => b.boardType === "reference")}
-          emptyNote={'No "how it\'s built" references yet.'}
-        />
 
         <ProgressPhotosPanel detailId={detail.id} photos={progressPhotos} />
 
