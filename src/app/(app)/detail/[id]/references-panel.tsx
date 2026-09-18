@@ -13,7 +13,7 @@ type PinterestState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; images: string[]; selected: Set<string> };
+  | { status: "ready"; images: string[]; selected: Set<string>; note?: string };
 
 // Mood board and Reference & assembly are merged into one visual section —
 // they share the same image-collection mechanic, and per-image type is now
@@ -63,7 +63,7 @@ export function ReferencesPanel({
     setPinterestState(
       "error" in result
         ? { status: "error", message: result.error }
-        : { status: "ready", images: result.images, selected: new Set() }
+        : { status: "ready", images: result.images, selected: new Set(), note: result.note }
     );
   }
 
@@ -129,12 +129,37 @@ export function ReferencesPanel({
           style={{ background: "var(--surface-2)", borderRadius: "var(--radius-sm)", marginBottom: "0.9rem" }}
         >
           <div className="section-title">
-            <span>{pinterestState.images.length} found on the board — tap the ones you want</span>
-            <button className="icon-btn" onClick={() => setPinterestState({ status: "idle" })}>
-              ✕
-            </button>
+            <span>{pinterestState.images.length} found — tap the ones you want</span>
+            <span style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                className="link-btn"
+                onClick={() =>
+                  setPinterestState((prev) =>
+                    prev.status === "ready" ? { ...prev, selected: new Set(prev.images) } : prev
+                  )
+                }
+              >
+                Select all
+              </button>
+              <button
+                className="link-btn"
+                onClick={() =>
+                  setPinterestState((prev) => (prev.status === "ready" ? { ...prev, selected: new Set() } : prev))
+                }
+              >
+                Clear
+              </button>
+              <button className="icon-btn" onClick={() => setPinterestState({ status: "idle" })}>
+                ✕
+              </button>
+            </span>
           </div>
-          <div className="board-grid">
+          {pinterestState.note ? (
+            <div className="sync-banner" style={{ marginBottom: "0.6rem" }}>
+              {pinterestState.note}
+            </div>
+          ) : null}
+          <div className="board-grid" style={{ maxHeight: "26rem", overflowY: "auto", paddingRight: "0.2rem" }}>
             {pinterestState.images.map((url) => {
               const checked = pinterestState.selected.has(url);
               return (
