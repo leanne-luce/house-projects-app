@@ -16,12 +16,14 @@ export function PhotoPickerButton({
   disabled,
   className = "secondary",
   style,
+  accept = "image/*",
 }: {
   onFileSelected: (file: File) => void;
   label?: string;
   disabled?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  accept?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -30,7 +32,7 @@ export function PhotoPickerButton({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={accept}
         disabled={disabled}
         style={{ display: "none" }}
         onChange={(e) => {

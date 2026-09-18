@@ -12,6 +12,7 @@ export default async function ReceiptsPage() {
       details={data.details}
       houses={data.houses}
       rooms={data.rooms}
+      contentTypeByAssetId={data.contentTypeByAssetId}
     />
   );
 }

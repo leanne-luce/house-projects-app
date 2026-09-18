@@ -28,7 +28,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { saveAsset, saveAssetBuffer, readAssetBuffer } from "./storage";
-import { runOcr, parseReceiptLines } from "./ocr";
+import { runOcr, extractPdfText, parseReceiptLines } from "./ocr";
 import crypto from "node:crypto";
 
 function revalidateEverything() {
@@ -395,10 +395,11 @@ async function maybeMarkReceiptLogged(receiptId: string) {
   }
 }
 
-async function extractAndStoreLineItems(receiptId: string, imageBuffer: Buffer) {
+async function extractAndStoreLineItems(receiptId: string, fileBuffer: Buffer, contentType: string) {
   await db.update(receipts).set({ status: "processing", ocrError: null }).where(eq(receipts.id, receiptId));
 
-  const result = await runOcr(imageBuffer);
+  const isPdf = contentType === "application/pdf";
+  const result = isPdf ? await extractPdfText(fileBuffer) : await runOcr(fileBuffer);
   if ("error" in result) {
     await db.update(receipts).set({ status: "new", ocrError: result.error }).where(eq(receipts.id, receiptId));
     return;
@@ -430,7 +431,11 @@ async function extractAndStoreLineItems(receiptId: string, imageBuffer: Buffer) 
     .set({
       status: "new",
       ocrText: result.text,
-      ocrError: found.length ? null : "Scanned it, but couldn't confidently pick out line items — add them by hand below.",
+      ocrError: found.length
+        ? null
+        : isPdf
+          ? "Read the PDF, but couldn't confidently pick out line items — this can happen if it's a scanned image with no real text layer. Add them by hand below."
+          : "Scanned it, but couldn't confidently pick out line items — add them by hand below.",
     })
     .where(eq(receipts.id, receiptId));
 
@@ -454,14 +459,15 @@ export async function uploadReceipt(
     }
   }
 
-  const saved = await saveAssetBuffer(buffer, file.name, file.type || "image/jpeg");
+  const contentType = file.type || "image/jpeg";
+  const saved = await saveAssetBuffer(buffer, file.name, contentType);
   const [assetRow] = await db.insert(assets).values(saved).returning();
   const [receiptRow] = await db
     .insert(receipts)
     .values({ assetId: assetRow.id, imageHash: hash, status: "new" })
     .returning();
 
-  await extractAndStoreLineItems(receiptRow.id, buffer);
+  await extractAndStoreLineItems(receiptRow.id, buffer, contentType);
   revalidateEverything();
   return { id: receiptRow.id };
 }
@@ -474,7 +480,7 @@ export async function rescanReceipt(receiptId: string) {
 
   try {
     const buffer = await readAssetBuffer(asset.url);
-    await extractAndStoreLineItems(receiptId, buffer);
+    await extractAndStoreLineItems(receiptId, buffer, asset.contentType || "image/jpeg");
   } catch (err) {
     console.error("rescan failed to read asset", err);
     await db
@@ -494,7 +500,7 @@ export async function assignReceiptLineItem(itemId: string, detailId: string) {
     detailId,
     description: item.description,
     cost: item.amount,
-    vendor: "",
+    vendor: receipt?.vendor || "",
     date: (receipt?.uploadedAt?.toISOString() ?? new Date().toISOString()).slice(0, 10),
     receiptAssetId: receipt?.assetId ?? null,
   });
@@ -506,11 +512,38 @@ export async function assignReceiptLineItem(itemId: string, detailId: string) {
   revalidateEverything();
 }
 
+// Editable regardless of status (pending, dismissed, or already assigned)
+// — a typo caught after dismissing something, or before deciding where an
+// item belongs, shouldn't be stuck. Note: editing an already-assigned
+// item's description/amount here does NOT retroactively change the real
+// LineItem it already created on a Detail's spend log — that's a separate,
+// independently-editable record at that point, same as the rest of the
+// app's pattern of editing spend directly on the Detail page.
+export async function updateReceiptLineItem(
+  itemId: string,
+  patch: Partial<{ description: string; amount: string }>
+) {
+  await db.update(receiptLineItems).set(patch).where(eq(receiptLineItems.id, itemId));
+  revalidateEverything();
+}
+
 export async function dismissReceiptLineItem(itemId: string) {
   const [item] = await db.select().from(receiptLineItems).where(eq(receiptLineItems.id, itemId)).limit(1);
   if (!item) return;
   await db.update(receiptLineItems).set({ status: "dismissed" }).where(eq(receiptLineItems.id, itemId));
   await maybeMarkReceiptLogged(item.receiptId);
+  revalidateEverything();
+}
+
+// Undo a dismiss without having to assign it right away — added alongside
+// letting dismissed items still be assigned, so "I dismissed this by
+// mistake" has a direct way back to pending, not just straight to a Detail.
+export async function restoreReceiptLineItem(itemId: string) {
+  const [item] = await db.select().from(receiptLineItems).where(eq(receiptLineItems.id, itemId)).limit(1);
+  if (!item) return;
+  await db.update(receiptLineItems).set({ status: "pending" }).where(eq(receiptLineItems.id, itemId));
+  // A pending item means this receipt is no longer fully logged.
+  await db.update(receipts).set({ status: "new" }).where(eq(receipts.id, item.receiptId));
   revalidateEverything();
 }
 
@@ -524,6 +557,11 @@ export async function addManualReceiptItem(receiptId: string, description: strin
   });
   // A new pending item means this receipt is no longer fully logged.
   await db.update(receipts).set({ status: "new" }).where(eq(receipts.id, receiptId));
+  revalidateEverything();
+}
+
+export async function updateReceiptVendor(id: string, vendor: string) {
+  await db.update(receipts).set({ vendor: vendor.trim() || null }).where(eq(receipts.id, id));
   revalidateEverything();
 }
 

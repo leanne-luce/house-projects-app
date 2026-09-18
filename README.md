@@ -81,6 +81,23 @@ Receipts are deliberately never run through the client-side image
 compression every other photo upload gets — OCR needs the sharpest text
 it can get, and re-encoding at lower quality works against that.
 
+Since Phase 4, four more receipt refinements were added:
+
+- PDF receipts, alongside photos — text extraction via `pdfjs-dist` directly
+  (not the `pdf-parse` package, which pulls in a native `@napi-rs/canvas`
+  dependency we don't need for plain text extraction). Same
+  `serverExternalPackages` fix as tesseract.js was needed here too:
+  pdfjs-dist spawns its own worker file, which breaks under Next.js's
+  default bundling the same way.
+- Dismissed receipt line items can still be assigned to a Detail (or
+  restored to pending) instead of being a dead end.
+- Receipt line item descriptions and amounts are editable regardless of
+  status, on both the Receipts tab and the Detail page's "Unassigned
+  receipt items" panel.
+- Receipts can be tagged with which store they came from; that vendor
+  flows automatically into the LineItem created when one of its items gets
+  assigned, so it doesn't need retyping per item.
+
 Phase 5 (Overview dashboard) is next.
 
 ## Scripts

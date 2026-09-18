@@ -11,6 +11,9 @@ import {
   addManualReceiptItem,
   assignReceiptLineItem,
   dismissReceiptLineItem,
+  restoreReceiptLineItem,
+  updateReceiptLineItem,
+  updateReceiptVendor,
 } from "@/lib/actions";
 import type {
   receipts as receiptsTable,
@@ -34,12 +37,14 @@ export function ReceiptsList({
   details,
   houses,
   rooms,
+  contentTypeByAssetId,
 }: {
   receipts: Receipt[];
   receiptLineItems: ReceiptLineItem[];
   details: Detail[];
   houses: House[];
   rooms: Room[];
+  contentTypeByAssetId: Record<string, string | null>;
 }) {
   const sortedDetails = [...details].sort((a, b) =>
     detailPath(houses, rooms, a).localeCompare(detailPath(houses, rooms, b))
@@ -62,6 +67,7 @@ export function ReceiptsList({
             sortedDetails={sortedDetails}
             houses={houses}
             rooms={rooms}
+            isPdf={contentTypeByAssetId[r.assetId] === "application/pdf"}
           />
         ))
       )}
@@ -106,15 +112,17 @@ function UploadForm() {
           onFileSelected={setPendingFile}
           disabled={uploading}
           className="secondary"
-          label={pendingFile ? `📷 ${pendingFile.name.slice(0, 24)}` : "📷 Choose receipt photo"}
+          accept="image/*,application/pdf"
+          label={pendingFile ? `📎 ${pendingFile.name.slice(0, 24)}` : "📎 Choose receipt (photo or PDF)"}
         />
         <button className="primary" onClick={() => handleUpload(false)} disabled={uploading || !pendingFile}>
           {uploading ? "Scanning…" : "Upload & scan"}
         </button>
       </div>
       <div className="scratchpad-help" style={{ marginTop: "0.4rem" }}>
-        Runs OCR on the server to pull out line items — it&apos;s imperfect, so review what it finds. Uploading
-        the same photo twice gets flagged.
+        Photos run through OCR; PDFs get their embedded text read directly (a scanned PDF with no real text
+        layer won&apos;t have anything to read — add items by hand in that case). Both are imperfect, so
+        review what&apos;s found. Uploading the same file twice gets flagged.
       </div>
     </div>
   );
@@ -126,12 +134,14 @@ function ReceiptCard({
   sortedDetails,
   houses,
   rooms,
+  isPdf,
 }: {
   receipt: Receipt;
   items: ReceiptLineItem[];
   sortedDetails: Detail[];
   houses: House[];
   rooms: Room[];
+  isPdf: boolean;
 }) {
   const [manualOpen, setManualOpen] = useState(false);
   const [rescanning, setRescanning] = useState(false);
@@ -145,15 +155,52 @@ function ReceiptCard({
   return (
     <div className="card" style={{ marginBottom: "0.9rem" }}>
       <div style={{ display: "flex", gap: "0.8rem", padding: "0.9rem" }}>
-        <img
-          src={`/asset/${receipt.assetId}`}
-          style={{ width: "4.5rem", height: "4.5rem", objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)", flexShrink: 0 }}
-          alt=""
-        />
+        {isPdf ? (
+          <a
+            href={`/asset/${receipt.assetId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              width: "4.5rem",
+              height: "4.5rem",
+              borderRadius: 8,
+              border: "1px solid var(--border)",
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "1.6rem",
+              background: "var(--surface-2)",
+              textDecoration: "none",
+            }}
+            title="Open PDF"
+          >
+            📄
+          </a>
+        ) : (
+          <img
+            src={`/asset/${receipt.assetId}`}
+            style={{ width: "4.5rem", height: "4.5rem", objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)", flexShrink: 0 }}
+            alt=""
+          />
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
-            <div style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>{fmtDate(receipt.uploadedAt)}</div>
+            <input
+              defaultValue={receipt.vendor || ""}
+              placeholder="Store / vendor"
+              style={{ border: "none", background: "transparent", padding: "0.1rem 0", fontWeight: 600, fontSize: "0.85rem", flex: 1 }}
+              onBlur={(e) => {
+                if (e.target.value !== (receipt.vendor || "")) {
+                  startTransition(() => updateReceiptVendor(receipt.id, e.target.value));
+                }
+              }}
+            />
             <span className={`status-pill ${statusClass}`}>{statusLabel}</span>
+          </div>
+          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+            {fmtDate(receipt.uploadedAt)}
+            {isPdf ? " · PDF" : ""}
           </div>
           <div style={{ fontSize: "0.78rem", color: "var(--text-faint)", marginTop: "0.15rem" }}>
             {items.length
@@ -175,7 +222,7 @@ function ReceiptCard({
                 setRescanning(false);
               }}
             >
-              {rescanning ? "Scanning…" : items.length ? "Re-scan" : "Run OCR"}
+              {rescanning ? "Scanning…" : items.length ? "Re-scan" : isPdf ? "Read PDF" : "Run OCR"}
             </button>
             <button className="link-btn" onClick={() => setManualOpen((v) => !v)}>
               + Add item manually
@@ -232,6 +279,38 @@ function ManualItemForm({ receiptId, onAdded }: { receiptId: string; onAdded: ()
   );
 }
 
+// Shared by pending and dismissed items — both are still "not yet finally
+// decided" states, so both get an editable description/amount and the
+// ability to assign to a Detail. Once assigned, a real LineItem exists
+// elsewhere and this row becomes a read-only summary of that decision.
+function EditableReceiptFields({ item }: { item: ReceiptLineItem }) {
+  const [, startTransition] = useTransition();
+  return (
+    <>
+      <input
+        defaultValue={item.description}
+        style={{ fontWeight: 600, padding: "0.1rem 0.3rem", marginBottom: "0.2rem" }}
+        onBlur={(e) => {
+          if (e.target.value.trim() && e.target.value !== item.description) {
+            startTransition(() => updateReceiptLineItem(item.id, { description: e.target.value.trim() }));
+          }
+        }}
+      />
+      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem" }}>
+        $
+        <input
+          type="number"
+          min={0}
+          step="any"
+          defaultValue={item.amount}
+          style={{ width: "5rem", padding: "0.1rem 0.3rem" }}
+          onBlur={(e) => startTransition(() => updateReceiptLineItem(item.id, { amount: e.target.value }))}
+        />
+      </span>
+    </>
+  );
+}
+
 function ReceiptLineItemRow({
   item,
   sortedDetails,
@@ -244,16 +323,6 @@ function ReceiptLineItemRow({
   rooms: Room[];
 }) {
   const [, startTransition] = useTransition();
-
-  if (item.status === "dismissed") {
-    return (
-      <div className="list-item" style={{ opacity: 0.55 }}>
-        <div className="list-item-main">
-          {item.description} — {money(item.amount)} <span style={{ fontSize: "0.7rem" }}>(dismissed)</span>
-        </div>
-      </div>
-    );
-  }
 
   if (item.status === "assigned") {
     const assignedDetail = sortedDetails.find((d) => d.id === item.assignedDetailId);
@@ -269,10 +338,14 @@ function ReceiptLineItemRow({
     );
   }
 
+  // pending or dismissed — both editable, both assignable
   return (
-    <div className="list-item">
+    <div className="list-item" style={item.status === "dismissed" ? { opacity: 0.6 } : undefined}>
       <div className="list-item-main">
-        {item.description} — {money(item.amount)}
+        <EditableReceiptFields item={item} />
+        {item.status === "dismissed" ? (
+          <span style={{ fontSize: "0.7rem", marginLeft: "0.4rem" }}>(dismissed)</span>
+        ) : null}
         <div className="inline-add-form" style={{ marginTop: "0.35rem" }}>
           <select
             defaultValue=""
@@ -287,9 +360,15 @@ function ReceiptLineItemRow({
               </option>
             ))}
           </select>
-          <button className="secondary" onClick={() => startTransition(() => dismissReceiptLineItem(item.id))}>
-            Dismiss
-          </button>
+          {item.status === "pending" ? (
+            <button className="secondary" onClick={() => startTransition(() => dismissReceiptLineItem(item.id))}>
+              Dismiss
+            </button>
+          ) : (
+            <button className="secondary" onClick={() => startTransition(() => restoreReceiptLineItem(item.id))}>
+              Restore to pending
+            </button>
+          )}
         </div>
       </div>
     </div>

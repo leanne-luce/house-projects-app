@@ -52,6 +52,7 @@ Every table below maps 1:1 to section 6's field names — kept, not renamed, so 
 3. **New `sessions` table (minimal)** — just enough to back the passphrase-gate's signed session cookie; not part of the section 6 domain model, purely plumbing, and there's no real `users` table since there's exactly one allowed session, not an account system.
 4. **`inbox_items.source` (new, nullable, additive)** — `manual | email | extension`, defaulting to `manual`. Needed so Phase 5's email-based capture (see cost model above — replacing SMS to avoid Twilio's recurring cost) and a future Chrome extension can tag where an item came from without changing existing behavior for anything filed by hand today.
 5. **`details.notes` (new, nullable, additive)** — a plain free-text field added on request, separate from `scratchpad` (which is specifically the math notepad). Any URL typed or pasted into it renders as a clickable link on the Detail page automatically.
+6. **`receipts.vendor` (new, nullable, additive)** — which store a receipt came from, added on request. Flows into the `vendor` field of any LineItem created when one of the receipt's line items is assigned.
 
 ### Derived values — computed at read time, not stored
 

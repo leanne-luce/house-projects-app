@@ -217,6 +217,11 @@ export const receipts = pgTable(
     status: text("status").notNull().default("new"),
     ocrText: text("ocr_text"),
     ocrError: text("ocr_error"),
+    // DEVIATION (addition, not in build brief section 6): which store this
+    // receipt came from, added on request. Flows into the vendor field of
+    // any LineItem created when a receipt line item is assigned, so it
+    // doesn't have to be re-typed per item.
+    vendor: text("vendor"),
   },
   (table) => [
     check("receipt_status_check", sql`${table.status} in ('new','processing','logged')`),

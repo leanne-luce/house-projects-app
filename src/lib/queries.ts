@@ -16,6 +16,7 @@ import {
   progressPhotos,
   receipts,
   receiptLineItems,
+  assets,
 } from "@/db/schema";
 import { asc, desc } from "drizzle-orm";
 
@@ -110,12 +111,21 @@ export async function getHorizonData() {
 }
 
 export async function getReceiptsTabData() {
-  const [receiptRows, itemRows, detailsRows, housesRows, roomsRows] = await Promise.all([
+  const [receiptRows, itemRows, detailsRows, housesRows, roomsRows, assetRows] = await Promise.all([
     db.select().from(receipts).orderBy(desc(receipts.uploadedAt)),
     db.select().from(receiptLineItems).orderBy(asc(receiptLineItems.createdAt)),
     db.select().from(details).orderBy(asc(details.createdAt)),
     db.select().from(houses).orderBy(asc(houses.createdAt)),
     db.select().from(rooms).orderBy(asc(rooms.createdAt)),
+    db.select().from(assets),
   ]);
-  return { receipts: receiptRows, receiptLineItems: itemRows, details: detailsRows, houses: housesRows, rooms: roomsRows };
+  const contentTypeByAssetId = Object.fromEntries(assetRows.map((a) => [a.id, a.contentType]));
+  return {
+    receipts: receiptRows,
+    receiptLineItems: itemRows,
+    details: detailsRows,
+    houses: housesRows,
+    rooms: roomsRows,
+    contentTypeByAssetId,
+  };
 }
