@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { compressImage } from "@/lib/compress-image";
 import { addBoardImage, updateBoardImage, deleteBoardImage, updateDetail } from "@/lib/actions";
 import { previewPinterestBoard } from "@/lib/pinterest";
+import { PhotoPickerButton } from "@/components/photo-picker-button";
 import type { boardImages as boardImagesTable } from "@/db/schema";
 
 type BoardImage = typeof boardImagesTable.$inferSelect;
@@ -30,7 +31,7 @@ export function ReferencesPanel({
 }) {
   const [, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const urlRef = useRef<HTMLInputElement>(null);
   const typeRef = useRef<HTMLSelectElement>(null);
 
@@ -39,20 +40,19 @@ export function ReferencesPanel({
   const [importing, setImporting] = useState(false);
 
   async function handleAdd() {
-    const file = fileRef.current?.files?.[0] || null;
     const sourceUrl = urlRef.current?.value || "";
     const boardType = (typeRef.current?.value as BoardType) || "mood";
-    if (!file && !sourceUrl.trim()) return;
+    if (!pendingFile && !sourceUrl.trim()) return;
 
     setUploading(true);
     const formData = new FormData();
     formData.set("detailId", detailId);
     formData.set("boardType", boardType);
     formData.set("sourceUrl", sourceUrl);
-    if (file) formData.set("file", await compressImage(file));
+    if (pendingFile) formData.set("file", await compressImage(pendingFile));
     await addBoardImage(formData);
     setUploading(false);
-    if (fileRef.current) fileRef.current.value = "";
+    setPendingFile(null);
     if (urlRef.current) urlRef.current.value = "";
   }
 
@@ -236,7 +236,12 @@ export function ReferencesPanel({
           <option value="mood">Mood</option>
           <option value="reference">Assembly ref</option>
         </select>
-        <input type="file" accept="image/*" ref={fileRef} style={{ flex: 1 }} disabled={uploading} />
+        <PhotoPickerButton
+          onFileSelected={setPendingFile}
+          disabled={uploading}
+          className="secondary"
+          label={pendingFile ? `📷 ${pendingFile.name.slice(0, 20)}` : "📷 Choose photo"}
+        />
         <input placeholder="or paste an image URL" ref={urlRef} disabled={uploading} />
         <button className="secondary" onClick={handleAdd} disabled={uploading}>
           {uploading ? "Adding…" : "Add"}

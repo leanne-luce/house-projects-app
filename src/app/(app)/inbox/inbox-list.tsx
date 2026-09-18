@@ -6,6 +6,7 @@ import { fmtDate } from "@/lib/format";
 import { detailPath } from "@/lib/derived";
 import { addInboxItem, fileInboxItem, discardInboxItem, fileInboxItemToNew } from "@/lib/actions";
 import { compressImage } from "@/lib/compress-image";
+import { PhotoPickerButton } from "@/components/photo-picker-button";
 import type { details as detailsTable, houses as housesTable, inboxItems as inboxItemsTable, rooms as roomsTable } from "@/db/schema";
 
 type House = typeof housesTable.$inferSelect;
@@ -26,7 +27,7 @@ export function InboxList({
 }) {
   const [pending, startTransition] = useTransition();
   const textRef = useRef<HTMLTextAreaElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const sortedDetails = [...details].sort((a, b) =>
     detailPath(houses, rooms, a).localeCompare(detailPath(houses, rooms, b))
@@ -42,21 +43,25 @@ export function InboxList({
           <textarea ref={textRef} rows={2} placeholder="A stray thought, a material, a link…" />
         </div>
         <div className="inline-add-form">
-          <input type="file" accept="image/*" ref={fileRef} style={{ flex: 1 }} disabled={pending} />
+          <PhotoPickerButton
+            onFileSelected={setPendingFile}
+            disabled={pending}
+            className="secondary"
+            label={pendingFile ? `📷 ${pendingFile.name.slice(0, 20)}` : "📷 Add a photo"}
+          />
           <button
             className="primary"
             disabled={pending}
             onClick={() => {
               const text = textRef.current?.value || "";
-              const file = fileRef.current?.files?.[0] || null;
-              if (!text.trim() && !file) return;
+              if (!text.trim() && !pendingFile) return;
               startTransition(async () => {
                 const formData = new FormData();
                 formData.set("text", text);
-                if (file) formData.set("file", await compressImage(file));
+                if (pendingFile) formData.set("file", await compressImage(pendingFile));
                 await addInboxItem(formData);
                 if (textRef.current) textRef.current.value = "";
-                if (fileRef.current) fileRef.current.value = "";
+                setPendingFile(null);
               });
             }}
           >

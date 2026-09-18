@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { compressImage } from "@/lib/compress-image";
 import { addProgressPhoto, deleteProgressPhoto } from "@/lib/actions";
+import { PhotoPickerButton } from "@/components/photo-picker-button";
 import type { progressPhotos as progressPhotosTable } from "@/db/schema";
 
 type ProgressPhoto = typeof progressPhotosTable.$inferSelect;
@@ -47,12 +48,9 @@ function PhaseColumn({
   photos: ProgressPhoto[];
   onDelete: (id: string) => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
-  async function handleFile() {
-    const file = fileRef.current?.files?.[0];
-    if (!file) return;
+  async function handleFile(file: File) {
     setUploading(true);
     const compressed = await compressImage(file);
     const formData = new FormData();
@@ -61,7 +59,6 @@ function PhaseColumn({
     formData.set("file", compressed);
     await addProgressPhoto(formData);
     setUploading(false);
-    if (fileRef.current) fileRef.current.value = "";
   }
 
   return (
@@ -79,13 +76,12 @@ function PhaseColumn({
       ) : (
         <div className="empty-note">—</div>
       )}
-      <input
-        type="file"
-        accept="image/*"
-        className="progress-file"
-        ref={fileRef}
+      <PhotoPickerButton
+        onFileSelected={handleFile}
         disabled={uploading}
-        onChange={handleFile}
+        label={uploading ? "Uploading…" : "+ Add photo"}
+        className="ghost"
+        style={{ width: "100%", marginTop: "0.3rem", fontSize: "0.74rem", padding: "0.65rem 0.4rem", minHeight: "2.75rem" }}
       />
     </div>
   );
