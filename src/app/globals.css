@@ -1,49 +1,150 @@
+/* Design tokens ported verbatim from the prototype's :root block
+   (house-projects-hub_1.html) — same names, same values, per the plan's
+   "Visual language" section. Not reinvented. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #FBF8F3;
+  --surface: #FFFFFF;
+  --surface-2: #F3EEE4;
+  --border: #E4DCC9;
+  --text: #2E2A22;
+  --text-muted: #756B57;
+  --text-faint: #A79C82;
+  --accent: #9D8B5E;
+  --accent-strong: #7A6A45;
+  --accent-soft: #EDE4CC;
+  --good: #7BA878;
+  --good-soft: #E4EFE1;
+  --warn: #C9A961;
+  --warn-soft: #F6EFDB;
+  --danger: #B5645A;
+  --danger-soft: #F5E4E1;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 1px 2px rgba(60,50,20,0.06), 0 4px 16px rgba(60,50,20,0.06);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root:not([data-theme="light"]) {
+  @media (prefers-color-scheme: dark) {
+    --bg: #1C1A15;
+    --surface: #262319;
+    --surface-2: #2E2A20;
+    --border: #3C3728;
+    --text: #EFE9DA;
+    --text-muted: #B5AB92;
+    --text-faint: #7C755F;
+    --accent: #C9B583;
+    --accent-strong: #DCC998;
+    --accent-soft: #3A331F;
+    --good: #8FBF8B;
+    --good-soft: #253425;
+    --warn: #D8BD7C;
+    --warn-soft: #3A3320;
+    --danger: #D08578;
+    --danger-soft: #3A2621;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.3);
   }
 }
 
-html {
-  height: 100%;
+:root[data-theme="dark"] {
+  --bg: #1C1A15;
+  --surface: #262319;
+  --surface-2: #2E2A20;
+  --border: #3C3728;
+  --text: #EFE9DA;
+  --text-muted: #B5AB92;
+  --text-faint: #7C755F;
+  --accent: #C9B583;
+  --accent-strong: #DCC998;
+  --accent-soft: #3A331F;
+  --good: #8FBF8B;
+  --good-soft: #253425;
+  --warn: #D8BD7C;
+  --warn-soft: #3A3320;
+  --danger: #D08578;
+  --danger-soft: #3A2621;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.3);
 }
 
-html,
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
 body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+#app-shell { max-width: 62rem; margin: 0 auto; padding: 1rem 1rem 6rem; }
+
+header.top {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--bg);
+  padding: 0.9rem 0 0.6rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+header.top h1 { font-size: 1.15rem; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+header.top h1 span.house-emoji { margin-right: 0.4rem; }
+
+nav.tabs { display: flex; gap: 0.25rem; background: var(--surface-2); padding: 0.25rem; border-radius: 999px; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+nav.tabs::-webkit-scrollbar { display: none; }
+nav.tabs a {
+  border: none; background: transparent; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;
+  padding: 0.45rem 0.85rem; border-radius: 999px; cursor: pointer; white-space: nowrap; text-decoration: none;
+  display: inline-block;
+}
+nav.tabs a.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+
+.badge-count {
+  display: inline-block; min-width: 1.1rem; padding: 0 0.3rem; margin-left: 0.3rem;
+  background: var(--accent); color: var(--surface); border-radius: 999px; font-size: 0.68rem; line-height: 1.1rem; text-align: center;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+button.primary, .btn-primary {
+  background: var(--accent-strong); color: #fff; border: none; border-radius: var(--radius-sm);
+  padding: 0.55rem 1rem; font-weight: 600; font-size: 0.88rem; cursor: pointer;
+}
+button.primary:hover, .btn-primary:hover { filter: brightness(1.05); }
+button.secondary, .btn-secondary {
+  background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.5rem 0.9rem; font-weight: 600; font-size: 0.85rem; cursor: pointer;
+}
+button.ghost, .btn-ghost {
+  background: transparent; color: var(--text-muted); border: 1px dashed var(--border); border-radius: var(--radius-sm);
+  padding: 0.45rem 0.8rem; font-size: 0.82rem; cursor: pointer;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+input, select, textarea {
+  font-family: inherit; font-size: 0.9rem; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.65rem; width: 100%;
 }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+label.field-label { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-faint); display: block; margin-bottom: 0.25rem; }
+::placeholder { color: var(--text-faint); }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.card-pad { padding: 1rem; }
+
+.status-pill { font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.02em; }
+.status-not_started { background: var(--surface-2); color: var(--text-faint); border: 1px solid var(--border); }
+.status-in_progress { background: var(--warn-soft); color: var(--warn); }
+.status-done { background: var(--good-soft); color: var(--good); }
+.status-on_hold { background: var(--danger-soft); color: var(--danger); }
+
+.empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-faint); }
+.empty-state .big-emoji { font-size: 2.2rem; margin-bottom: 0.6rem; }
+
+.fab {
+  position: fixed; right: 1.1rem; bottom: 1.1rem; z-index: 50;
+  width: 3.4rem; height: 3.4rem; border-radius: 50%; background: var(--accent-strong); color: #fff;
+  border: none; font-size: 1.6rem; box-shadow: var(--shadow); cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+.login-wrap {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.login-card { width: 100%; max-width: 22rem; padding: 1.5rem; }
+.login-card h1 { font-size: 1.2rem; margin: 0 0 1rem; }
+.login-error { color: var(--danger); font-size: 0.82rem; margin-top: 0.5rem; }

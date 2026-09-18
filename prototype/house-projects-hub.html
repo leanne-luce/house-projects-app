@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>House Projects Hub</title>
+<style>
+  :root {
+    --bg: #FBF8F3;
+    --surface: #FFFFFF;
+    --surface-2: #F3EEE4;
+    --border: #E4DCC9;
+    --text: #2E2A22;
+    --text-muted: #756B57;
+    --text-faint: #A79C82;
+    --accent: #9D8B5E;
+    --accent-strong: #7A6A45;
+    --accent-soft: #EDE4CC;
+    --good: #7BA878;
+    --good-soft: #E4EFE1;
+    --warn: #C9A961;
+    --warn-soft: #F6EFDB;
+    --danger: #B5645A;
+    --danger-soft: #F5E4E1;
+    --radius: 14px;
+    --radius-sm: 9px;
+    --shadow: 0 1px 2px rgba(60,50,20,0.06), 0 4px 16px rgba(60,50,20,0.06);
+    font-size: 16px;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --bg: #1C1A15;
+      --surface: #262319;
+      --surface-2: #2E2A20;
+      --border: #3C3728;
+      --text: #EFE9DA;
+      --text-muted: #B5AB92;
+      --text-faint: #7C755F;
+      --accent: #C9B583;
+      --accent-strong: #DCC998;
+      --accent-soft: #3A331F;
+      --good: #8FBF8B;
+      --good-soft: #253425;
+      --warn: #D8BD7C;
+      --warn-soft: #3A3320;
+      --danger: #D08578;
+      --danger-soft: #3A2621;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1C1A15;
+    --surface: #262319;
+    --surface-2: #2E2A20;
+    --border: #3C3728;
+    --text: #EFE9DA;
+    --text-muted: #B5AB92;
+    --text-faint: #7C755F;
+    --accent: #C9B583;
+    --accent-strong: #DCC998;
+    --accent-soft: #3A331F;
+    --good: #8FBF8B;
+    --good-soft: #253425;
+    --warn: #D8BD7C;
+    --warn-soft: #3A3320;
+    --danger: #D08578;
+    --danger-soft: #3A2621;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.3);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  #app { max-width: 62rem; margin: 0 auto; padding: 1rem 1rem 6rem; }
+  header.top {
+    position: sticky; top:0; z-index: 20;
+    background: var(--bg);
+    padding: 0.9rem 0 0.6rem;
+    display:flex; align-items:center; justify-content:space-between; gap:0.75rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1rem;
+  }
+  header.top h1 { font-size: 1.15rem; margin:0; font-weight:700; letter-spacing:-0.01em; }
+  header.top h1 span.house-emoji { margin-right:0.4rem; }
+  nav.tabs { display:flex; gap:0.25rem; background:var(--surface-2); padding:0.25rem; border-radius: 999px; overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
+  nav.tabs::-webkit-scrollbar { display:none; }
+  nav.tabs button {
+    border:none; background:transparent; color:var(--text-muted); font-size:0.85rem; font-weight:600;
+    padding:0.45rem 0.85rem; border-radius:999px; cursor:pointer; white-space:nowrap;
+  }
+  nav.tabs button.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
+  .badge-count {
+    display:inline-block; min-width:1.1rem; padding:0 0.3rem; margin-left:0.3rem;
+    background:var(--accent); color:var(--surface); border-radius:999px; font-size:0.68rem; line-height:1.1rem; text-align:center;
+  }
+  button.primary {
+    background: var(--accent-strong); color:#fff; border:none; border-radius: var(--radius-sm);
+    padding:0.55rem 1rem; font-weight:600; font-size:0.88rem; cursor:pointer;
+  }
+  button.primary:hover { filter:brightness(1.05); }
+  button.secondary {
+    background: var(--surface-2); color:var(--text); border:1px solid var(--border); border-radius: var(--radius-sm);
+    padding:0.5rem 0.9rem; font-weight:600; font-size:0.85rem; cursor:pointer;
+  }
+  button.ghost {
+    background:transparent; color:var(--text-muted); border:1px dashed var(--border); border-radius:var(--radius-sm);
+    padding:0.45rem 0.8rem; font-size:0.82rem; cursor:pointer;
+  }
+  button.icon-btn {
+    background:transparent; border:none; color:var(--text-faint); cursor:pointer; font-size:1rem; padding:0.2rem 0.4rem;
+  }
+  button.icon-btn:hover { color:var(--danger); }
+  button.link-btn { background:none; border:none; color:var(--accent-strong); font-weight:600; font-size:0.82rem; cursor:pointer; padding:0.2rem 0; text-decoration:underline; }
+  input, select, textarea {
+    font-family:inherit; font-size:0.9rem; color:var(--text); background:var(--surface);
+    border:1px solid var(--border); border-radius:var(--radius-sm); padding:0.5rem 0.65rem; width:100%;
+  }
+  input:focus, select:focus, textarea:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  label.field-label { font-size:0.74rem; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; color:var(--text-faint); display:block; margin-bottom:0.25rem; }
+  .field { margin-bottom:0.7rem; }
+  .field-row { display:flex; gap:0.6rem; flex-wrap:wrap; }
+  .field-row > .field { flex:1; min-width:8rem; }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); }
+  .card-pad { padding:1rem; }
+
+  /* House tree */
+  .house-card { margin-bottom:0.9rem; }
+  .house-head { display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1rem; cursor:pointer; gap:0.6rem; }
+  .house-title { display:flex; align-items:center; gap:0.6rem; min-width:0; }
+  .house-title .chev { color:var(--text-faint); transition:transform .15s; flex-shrink:0; }
+  .house-title .chev.open { transform:rotate(90deg); }
+  .house-name { font-weight:700; font-size:1rem; }
+  .house-address { font-size:0.78rem; color:var(--text-faint); }
+  .house-stats { font-size:0.78rem; color:var(--text-muted); text-align:right; flex-shrink:0; }
+  .house-body { padding: 0 1rem 1rem; border-top:1px solid var(--border); }
+  .room-block { margin-top:0.8rem; }
+  .room-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem; }
+  .room-name { font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.03em; }
+  .detail-row {
+    display:flex; align-items:center; justify-content:space-between; gap:0.6rem;
+    padding:0.55rem 0.7rem; border-radius:var(--radius-sm); background:var(--surface-2); margin-bottom:0.4rem; cursor:pointer;
+  }
+  .detail-row:hover { background:var(--accent-soft); }
+  .detail-name { font-weight:600; font-size:0.9rem; }
+  .detail-meta { font-size:0.76rem; color:var(--text-muted); display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; }
+  .status-pill { font-size:0.68rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:999px; text-transform:uppercase; letter-spacing:0.02em; }
+  .status-not_started { background:var(--surface-2); color:var(--text-faint); border:1px solid var(--border); }
+  .status-in_progress { background:var(--warn-soft); color:var(--warn); }
+  .status-done { background:var(--good-soft); color:var(--good); }
+  .status-on_hold { background:var(--danger-soft); color:var(--danger); }
+  .add-row-btns { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem; }
+  .empty-note { color:var(--text-faint); font-size:0.85rem; font-style:italic; padding:0.4rem 0; }
+
+  /* Modal */
+  .modal-backdrop {
+    position:fixed; inset:0; background:rgba(20,16,8,0.45); z-index:100;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  @media (min-width: 640px) { .modal-backdrop { align-items:center; } }
+  .modal {
+    background:var(--surface); width:100%; max-width:38rem; max-height:92vh; overflow-y:auto;
+    border-radius: var(--radius) var(--radius) 0 0; box-shadow:var(--shadow);
+  }
+  @media (min-width: 640px) { .modal { border-radius: var(--radius); max-height:85vh; } }
+  .modal-header { position:sticky; top:0; background:var(--surface); padding:1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:0.6rem; z-index:2; }
+  .modal-body { padding:1rem; }
+  .modal-close { background:none; border:none; font-size:1.3rem; color:var(--text-faint); cursor:pointer; line-height:1; padding:0.2rem 0.4rem; }
+  .section { margin-bottom:1.3rem; }
+  .section-title { font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; color:var(--text-faint); margin-bottom:0.5rem; display:flex; align-items:center; justify-content:space-between; }
+  .list-item { display:flex; align-items:flex-start; justify-content:space-between; gap:0.6rem; padding:0.5rem 0.6rem; background:var(--surface-2); border-radius:var(--radius-sm); margin-bottom:0.35rem; }
+  .list-item-main { min-width:0; flex:1; font-size:0.85rem; }
+  .list-item-sub { font-size:0.75rem; color:var(--text-muted); margin-top:0.15rem; }
+  .totals-strip { display:flex; gap:0.8rem; flex-wrap:wrap; background:var(--accent-soft); border-radius:var(--radius-sm); padding:0.6rem 0.8rem; margin-bottom:0.6rem; }
+  .totals-strip .tot { font-size:0.78rem; color:var(--text-muted); }
+  .totals-strip .tot b { color:var(--text); font-size:0.95rem; display:block; }
+  .checklist-item { display:flex; align-items:center; gap:0.5rem; padding:0.35rem 0.2rem; }
+  .checklist-item input[type=checkbox] { width:auto; }
+  .checklist-item.done .cl-text { text-decoration:line-through; color:var(--text-faint); }
+  .inline-add-form { display:flex; gap:0.4rem; margin-top:0.4rem; flex-wrap:wrap; }
+  .inline-add-form input, .inline-add-form select { flex:1; min-width:6rem; }
+  .receipt-thumb { width:2.2rem; height:2.2rem; border-radius:6px; object-fit:cover; border:1px solid var(--border); }
+  .move-row { display:flex; gap:0.5rem; }
+  .move-row select { flex:1; }
+  .danger-zone { border-top:1px solid var(--border); padding-top:0.8rem; margin-top:1.3rem; }
+
+  /* Scratchpad */
+  .scratchpad-wrap { display:flex; flex-direction:column; gap:0.5rem; }
+  #scratchpadInput {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size:0.82rem; line-height:1.5; min-height:6rem; resize:vertical;
+    background:var(--surface-2);
+  }
+  .scratchpad-preview {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size:0.82rem; line-height:1.6; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:0.5rem 0.7rem; max-height:9rem; overflow-y:auto;
+  }
+  .sp-line { display:flex; justify-content:space-between; gap:0.6rem; white-space:pre-wrap; word-break:break-word; }
+  .sp-src { color:var(--text); flex:1; }
+  .sp-result { color:var(--accent-strong); font-weight:700; flex-shrink:0; }
+  .sp-comment { color:var(--text-faint); }
+  .scratchpad-help { font-size:0.72rem; color:var(--text-faint); }
+
+  /* Inbox */
+  .inbox-item { display:flex; gap:0.7rem; padding:0.7rem; }
+  .inbox-item img.inbox-photo { width:3.2rem; height:3.2rem; border-radius:8px; object-fit:cover; flex-shrink:0; }
+  .inbox-item-body { flex:1; min-width:0; }
+  .inbox-item-text { font-size:0.88rem; }
+  .inbox-item-time { font-size:0.72rem; color:var(--text-faint); margin-top:0.15rem; }
+  .inbox-actions { display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap; }
+  .file-picker { display:none; margin-top:0.6rem; background:var(--surface-2); border-radius:var(--radius-sm); padding:0.6rem; }
+  .file-picker.open { display:block; }
+  .new-detail-inline { display:none; margin-top:0.5rem; gap:0.4rem; flex-direction:column; }
+  .new-detail-inline.open { display:flex; }
+
+  /* Horizon */
+  .horizon-group { margin-bottom:1.1rem; }
+  .horizon-group h3 { font-size:0.82rem; text-transform:uppercase; letter-spacing:0.03em; color:var(--text-faint); margin:0 0 0.5rem; }
+  .horizon-item { display:flex; justify-content:space-between; align-items:center; padding:0.55rem 0.7rem; background:var(--surface-2); border-radius:var(--radius-sm); margin-bottom:0.4rem; cursor:pointer; }
+  .horizon-item:hover { background:var(--accent-soft); }
+  .breadcrumb { font-size:0.75rem; color:var(--text-muted); }
+
+  /* FAB */
+  .fab {
+    position:fixed; right:1.1rem; bottom:1.1rem; z-index:50;
+    width:3.4rem; height:3.4rem; border-radius:50%; background:var(--accent-strong); color:#fff;
+    border:none; font-size:1.6rem; box-shadow:var(--shadow); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .empty-state { text-align:center; padding:3rem 1rem; color:var(--text-faint); }
+  .empty-state .big-emoji { font-size:2.2rem; margin-bottom:0.6rem; }
+  .toast {
+    position:fixed; bottom:5.2rem; left:50%; transform:translateX(-50%); background:var(--text); color:var(--bg);
+    padding:0.55rem 1rem; border-radius:999px; font-size:0.82rem; z-index:200; box-shadow:var(--shadow);
+  }
+  .sync-banner { background:var(--warn-soft); color:var(--accent-strong); font-size:0.8rem; padding:0.5rem 0.8rem; border-radius:var(--radius-sm); margin-bottom:0.8rem; }
+  ::placeholder { color: var(--text-faint); }
+
+  /* Detail page */
+  .detail-page { animation: db-fade .18s ease; }
+  @keyframes db-fade { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+  .db-backbar { margin-bottom:0.7rem; }
+  .db-backbar button {
+    background:none; border:none; color:var(--accent-strong); font-weight:700; font-size:0.88rem; cursor:pointer; padding:0.2rem 0;
+  }
+  .db-hero {
+    position:relative; overflow:hidden; border-radius:var(--radius); padding:1.4rem 1.4rem 1.4rem 1.6rem; margin-bottom:1.2rem;
+    background: linear-gradient(155deg, var(--surface) 0%, var(--surface-2) 130%);
+    border:1px solid var(--border); box-shadow:var(--shadow);
+  }
+  .db-hero::before {
+    content:""; position:absolute; left:0; top:0; bottom:0; width:6px; background:var(--status-color, var(--accent));
+  }
+  .db-breadcrumb { font-size:0.8rem; color:var(--text-muted); margin-bottom:0.15rem; }
+  .db-name-input {
+    font-size:1.55rem; font-weight:800; letter-spacing:-0.015em; border:none; background:transparent; width:100%; padding:0.1rem 0; color:var(--text);
+  }
+  .db-hero-meta { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem; }
+  .db-hero-meta select, .db-hero-meta input { width:auto; font-size:0.82rem; padding:0.35rem 0.6rem; }
+  .db-status-select { font-weight:700; }
+  .db-budget { margin-top:1.15rem; display:flex; flex-direction:column; gap:0.55rem; background:rgba(157,139,94,0.07); border-radius:var(--radius-sm); padding:0.75rem 0.85rem; }
+  .db-bar-row { display:flex; align-items:center; gap:0.6rem; }
+  .db-bar-label { width:5.2rem; font-size:0.76rem; color:var(--text-muted); flex-shrink:0; }
+  .db-bar-track { flex:1; height:0.6rem; background:var(--surface-2); border-radius:999px; overflow:hidden; border:1px solid var(--border); }
+  .db-bar-fill { height:100%; border-radius:999px; transition:width .35s ease; }
+  .db-bar-value { min-width:4.2rem; text-align:right; font-size:0.82rem; font-weight:700; flex-shrink:0; }
+  .db-checklist-progress-wrap { margin-top:1rem; }
+  .db-checklist-progress-track { height:0.5rem; background:var(--surface-2); border-radius:999px; overflow:hidden; border:1px solid var(--border); }
+  .db-checklist-progress-fill { height:100%; background:var(--good); border-radius:999px; transition:width .35s ease; }
+
+  .panel-grid { display:grid; grid-template-columns:1fr; gap:1rem; }
+  @media (min-width:760px){
+    .panel-grid { grid-template-columns:1fr 1fr; }
+    .panel-grid .span2 { grid-column:1 / -1; }
+  }
+  .panel-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; box-shadow:var(--shadow); }
+  .panel-card h4 {
+    margin:0 0 0.7rem; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; color:var(--text-faint);
+    display:flex; align-items:center; gap:0.4rem;
+  }
+
+  /* Overview */
+  .ov-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(7rem,1fr)); gap:0.7rem; margin-bottom:1rem; }
+  .ov-stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:0.8rem; text-align:center; box-shadow:var(--shadow); }
+  .ov-stat-num { font-size:1.4rem; font-weight:800; color:var(--accent-strong); }
+  .ov-stat-label { font-size:0.72rem; color:var(--text-muted); margin-top:0.15rem; }
+
+  /* Editable house/room fields */
+  .house-name-input { font-weight:700; font-size:1rem; border:none; background:transparent; padding:0; width:100%; color:var(--text); }
+  .house-address-input { font-size:0.78rem; color:var(--text-faint); border:none; background:transparent; padding:0; width:100%; margin-top:0.1rem; }
+  .room-name-input { font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.03em; border:none; background:transparent; padding:0; width:auto; }
+
+  /* Mood board / reference collection */
+  .board-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(6.5rem,1fr)); gap:0.6rem; margin-bottom:0.6rem; }
+  .board-item { position:relative; }
+  .board-thumb { width:100%; aspect-ratio:1; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--border); display:block; background:var(--surface-2); }
+  .board-note { width:100%; font-size:0.7rem; margin-top:0.25rem; padding:0.2rem 0.35rem; }
+  .board-del { position:absolute; top:0.25rem; right:0.25rem; background:rgba(20,16,8,0.6); color:#fff; border-radius:50%; width:1.4rem; height:1.4rem; display:flex; align-items:center; justify-content:center; font-size:0.75rem; }
+
+  /* Color palette */
+  .swatch-row { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.6rem; }
+  .swatch-item { display:flex; flex-direction:column; align-items:center; gap:0.3rem; background:var(--surface-2); border-radius:var(--radius-sm); padding:0.5rem; width:5.4rem; }
+  .swatch-item .sw-color { width:2.3rem; height:2.3rem; padding:0; border:2px solid var(--surface); border-radius:50%; cursor:pointer; box-shadow:0 0 0 1px var(--border); }
+  .swatch-item .sw-label { width:100%; font-size:0.68rem; text-align:center; padding:0.15rem; }
+
+  /* Progress photos */
+  .progress-cols { display:grid; grid-template-columns:repeat(3,1fr); gap:0.7rem; }
+  .progress-col-title { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.02em; color:var(--text-faint); margin-bottom:0.5rem; text-align:center; }
+  .progress-photo-item { position:relative; margin-bottom:0.4rem; }
+  .progress-thumb { width:100%; aspect-ratio:1; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--border); display:block; }
+  .progress-photo-item .icon-btn { position:absolute; top:0.15rem; right:0.15rem; background:rgba(20,16,8,0.6); color:#fff; border-radius:50%; width:1.2rem; height:1.2rem; font-size:0.65rem; display:flex; align-items:center; justify-content:center; padding:0; }
+  .progress-file { width:100%; font-size:0.66rem; margin-top:0.15rem; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- state ----------
+  const COLS = ["houses","rooms","details","checklistItems","inboxItems","materialItems","lineItems","boardImages","paletteSwatches","progressPhotos","receipts","receiptLineItems"];
+  const state = { houses:{}, rooms:{}, details:{}, checklistItems:{}, inboxItems:{}, materialItems:{}, lineItems:{}, boardImages:{}, paletteSwatches:{}, progressPhotos:{}, receipts:{}, receiptLineItems:{} };
+  const ui = {
+    tab: "houses",
+    expandedHouses: new Set(),
+    openDetail: null,
+    quickAddOpen: false,
+    filingItem: null,
+    newDetailUI: {}, // inboxItemId -> {open:bool, house:'', room:'', detail:''}
+    manualItemOpen: null, // receiptId of the manual-add-item form that's open
+    ready: false,
+    dbAvailable: null,
+    assetsAvailable: null,
+    toast: null,
+  };
+
+  let db = null, assetsCap = null;
+
+  const STATUS_LABEL = { not_started:"Not started", in_progress:"In progress", done:"Done", on_hold:"On hold" };
+  const MSTATUS_LABEL = { idea:"Idea", decided:"Decided", need_to_source:"Need to source", purchased:"Purchased" };
+  const GRAN_LABEL = { "":"Unscheduled", day:"Day", week:"Week", month:"Month", quarter:"Quarter", year:"Year" };
+
+  function uid(){ return Math.random().toString(36).slice(2,10); }
+  function esc(s){ return (s==null?"":String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function money(n){ n = Number(n)||0; return "$" + n.toLocaleString(undefined,{minimumFractionDigits: n%1?2:0, maximumFractionDigits:2}); }
+  function nowISO(){ return new Date().toISOString(); }
+  function fmtDate(iso){ if(!iso) return ""; try { return new Date(iso).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}); } catch(e){ return iso; } }
+
+  function showToast(msg){
+    ui.toast = msg;
+    render();
+    setTimeout(()=>{ ui.toast = null; render(); }, 2200);
+  }
+
+  // ---------- capability init ----------
+  async function init(){
+    render(); // paint shell immediately
+    if (!window.claude || !window.claude.use){
+      ui.dbAvailable = false; render(); return;
+    }
+    try {
+      db = await window.claude.use("db");
+    } catch(e){ db = null; }
+    ui.dbAvailable = !!db;
+    try {
+      assetsCap = await window.claude.use("assets");
+    } catch(e){ assetsCap = null; }
+    ui.assetsAvailable = !!assetsCap;
+    if (db) attachAll();
+    ui.ready = true;
+    render();
+  }
+
+  function attachAll(){
+    COLS.forEach(name=>{
+      try {
+        db.collection(name).onSnapshot(
+          snap => {
+            const next = {};
+            snap.docs.forEach(d=>{ next[d.id] = d.data(); });
+            state[name] = next;
+            safeRender();
+          },
+          err => {
+            console.error("db sync error", name, err);
+            showToast("Sync issue on " + name + " (" + err.code + ")");
+          }
+        );
+      } catch(e){ console.error(e); }
+    });
+  }
+
+  // Skip a destructive full re-render while the person is actively typing/
+  // tabbing between fields inside the app; state is already updated, so
+  // the next render (on blur-away, tab switch, or button click) catches up.
+  function safeRender(){
+    const ae = document.activeElement;
+    const appEl = document.getElementById("app");
+    const typing = ae && appEl && appEl.contains(ae) && (ae.tagName==="INPUT" || ae.tagName==="TEXTAREA" || ae.tagName==="SELECT");
+    if (typing) return;
+    render();
+  }
+
+  // ---------- data helpers ----------
+  function col(name){ return db.collection(name); }
+
+  function listOf(store){ return Object.keys(store).map(id=>Object.assign({id}, store[id])); }
+
+  function detailsForHouse(houseId){ return listOf(state.details).filter(d=>d.houseId===houseId); }
+  function detailsForRoom(roomId){ return listOf(state.details).filter(d=>d.roomId===roomId); }
+  function detailsDirectOnHouse(houseId){ return listOf(state.details).filter(d=>d.houseId===houseId && !d.roomId); }
+  function roomsForHouse(houseId){ return listOf(state.rooms).filter(r=>r.houseId===houseId); }
+
+  function materialsFor(detailId){ return listOf(state.materialItems).filter(m=>m.detailId===detailId); }
+  function lineItemsFor(detailId){ return listOf(state.lineItems).filter(l=>l.detailId===detailId); }
+  function checklistFor(detailId){ return listOf(state.checklistItems).filter(c=>c.detailId===detailId); }
+  function inboxFiledTo(detailId){ return listOf(state.inboxItems).filter(i=>i.filedTo===detailId); }
+  function unfiledInbox(){ return listOf(state.inboxItems).filter(i=>!i.filedTo).sort((a,b)=> (b.createdAt||"").localeCompare(a.createdAt||"")); }
+  function boardImagesFor(detailId, boardType){ return listOf(state.boardImages).filter(b=>b.detailId===detailId && b.boardType===boardType).sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||"")); }
+  function swatchesFor(detailId){ return listOf(state.paletteSwatches).filter(s=>s.detailId===detailId).sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||"")); }
+  function progressPhotosFor(detailId, phase){ return listOf(state.progressPhotos).filter(p=>p.detailId===detailId && p.phase===phase).sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||"")); }
+
+  function roughCost(detailId){ return materialsFor(detailId).reduce((s,m)=> s + (Number(m.roughQuantity)||0)*(Number(m.roughUnitCost)||0), 0); }
+  function actualCost(detailId){ return lineItemsFor(detailId).reduce((s,l)=> s + (Number(l.cost)||0), 0); }
+
+  function houseRollup(houseId){
+    const ds = detailsForHouse(houseId);
+    let rough=0, actual=0; const counts = {not_started:0,in_progress:0,done:0,on_hold:0};
+    ds.forEach(d=>{ rough += roughCost(d.id); actual += actualCost(d.id); counts[d.status||"not_started"] = (counts[d.status||"not_started"]||0)+1; });
+    return {count: ds.length, rough, actual, counts};
+  }
+  function roomRollup(roomId){
+    const ds = detailsForRoom(roomId);
+    let rough=0, actual=0;
+    ds.forEach(d=>{ rough += roughCost(d.id); actual += actualCost(d.id); });
+    return {count: ds.length, rough, actual};
+  }
+
+  function detailPath(detailId){
+    const d = state.details[detailId]; if(!d) return "—";
+    const h = state.houses[d.houseId];
+    const r = d.roomId ? state.rooms[d.roomId] : null;
+    return [h?h.name:"?", r?r.name:null, d.name].filter(Boolean).join(" / ");
+  }
+
+  // ---------- write plumbing ----------
+  // The store requires one write at a time per document and gives no
+  // guarantee if you fire two updates to the same doc back to back
+  // (e.g. tabbing qty -> cost on the same material). Queue writes per
+  // document, apply changes to local state immediately so the UI never
+  // looks like it "reverted", and surface anything that actually fails
+  // instead of losing it silently.
+  const writeQueues = {};
+  function queueWrite(key, fn){
+    const prev = writeQueues[key] || Promise.resolve();
+    const run = prev.then(fn, fn);
+    writeQueues[key] = run.catch(()=>{});
+    return run;
+  }
+  function friendlyErr(err){
+    if (!err) return "try again";
+    if (err.code === "resource_exhausted") return "too many changes at once — try again in a second";
+    if (err.code === "unavailable") return "connection hiccup — try again";
+    if (err.code === "quota_exceeded") return "storage is full — delete something first";
+    return err.code || "try again";
+  }
+  async function safeAdd(colName, data){
+    try { return await col(colName).add(data); }
+    catch(err){ console.error("add failed", colName, data, err); showToast("Couldn't save — " + friendlyErr(err)); return null; }
+  }
+  async function safeUpdate(colName, id, patch){
+    if (state[colName] && state[colName][id]) Object.assign(state[colName][id], patch);
+    try { await queueWrite(colName+"/"+id, ()=> col(colName).doc(id).update(patch)); }
+    catch(err){ console.error("update failed", colName, id, patch, err); showToast("Couldn't save that change — " + friendlyErr(err)); }
+  }
+  async function safeDelete(colName, id){
+    try { await queueWrite(colName+"/"+id, ()=> col(colName).doc(id).delete()); }
+    catch(err){ console.error("delete failed", colName, id, err); showToast("Couldn't delete that — " + friendlyErr(err)); }
+  }
+
+  // ---------- CRUD actions ----------
+  async function addHouse(name, address){
+    if(!db) return showToast("Not connected yet — try again in a moment.");
+    if(!name.trim()) return;
+    await safeAdd("houses", {name:name.trim(), address:(address||"").trim(), targetBudget:null, createdAt: nowISO()});
+  }
+  async function addRoom(houseId, name){
+    if(!name.trim()) return;
+    await safeAdd("rooms", {houseId, name:name.trim(), createdAt: nowISO()});
+  }
+  async function updateHouse(id, patch){ await safeUpdate("houses", id, patch); safeRender(); }
+  async function updateRoom(id, patch){ await safeUpdate("rooms", id, patch); safeRender(); }
+  async function addDetail(houseId, roomId, name){
+    if(!name.trim()) return;
+    await safeAdd("details", {
+      houseId, roomId: roomId||null, name:name.trim(), status:"not_started",
+      timeframeGranularity:"", timeframeValue:"", createdAt: nowISO()
+    });
+  }
+  async function updateDetail(id, patch){ await safeUpdate("details", id, patch); safeRender(); }
+  async function deleteDetail(id){
+    if(!confirm("Delete this detail and everything logged under it (materials, spend, checklist)? This can't be undone.")) return;
+    const mats = materialsFor(id), lines = lineItemsFor(id), cks = checklistFor(id), filed = inboxFiledTo(id);
+    await Promise.all([
+      ...mats.map(m=>safeDelete("materialItems", m.id)),
+      ...lines.map(l=>safeDelete("lineItems", l.id)),
+      ...cks.map(c=>safeDelete("checklistItems", c.id)),
+      ...filed.map(i=>safeUpdate("inboxItems", i.id, {filedTo:null})),
+    ]);
+    await safeDelete("details", id);
+    if(ui.openDetail===id) ui.openDetail=null;
+    safeRender();
+  }
+  async function deleteRoom(id){
+    const ds = detailsForRoom(id);
+    if(ds.length){
+      if(!confirm(ds.length+" detail(s) in this room will move up to sit directly under the house. Continue?")) return;
+      await Promise.all(ds.map(d=>safeUpdate("details", d.id, {roomId:null})));
+    }
+    await safeDelete("rooms", id);
+    safeRender();
+  }
+  async function deleteHouse(id){
+    const ds = detailsForHouse(id), rs = roomsForHouse(id);
+    if(!confirm("Delete \""+(state.houses[id]?.name||"this house")+"\" and everything in it — "+ds.length+" detail(s), "+rs.length+" room(s)? This can't be undone.")) return;
+    for(const d of ds) await deleteDetail(d.id);
+    await Promise.all(rs.map(r=>safeDelete("rooms", r.id)));
+    await safeDelete("houses", id);
+    safeRender();
+  }
+
+  async function addMaterial(detailId, desc, qty, unitCost){
+    if(!desc.trim()) return;
+    await safeAdd("materialItems", {detailId, description:desc.trim(), roughQuantity:Number(qty)||1, roughUnitCost:Number(unitCost)||0, status:"idea", createdAt: nowISO()});
+  }
+  async function updateMaterial(id, patch){ await safeUpdate("materialItems", id, patch); safeRender(); }
+  async function deleteMaterial(id){ await safeDelete("materialItems", id); safeRender(); }
+
+  async function addLineItem(detailId, desc, cost, vendor, date, receiptAssetId){
+    if(!desc.trim()) return;
+    await safeAdd("lineItems", {detailId, description:desc.trim(), cost:Number(cost)||0, vendor:(vendor||"").trim(), date: date||nowISO().slice(0,10), receiptAssetId: receiptAssetId||null, createdAt: nowISO()});
+  }
+  async function updateLineItem(id, patch){ await safeUpdate("lineItems", id, patch); safeRender(); }
+  async function deleteLineItem(id){ await safeDelete("lineItems", id); safeRender(); }
+
+  async function addChecklistItem(detailId, text){
+    if(!text.trim()) return;
+    await safeAdd("checklistItems", {detailId, description:text.trim(), done:false, createdAt: nowISO()});
+  }
+  async function updateChecklistItem(id, patch){ await safeUpdate("checklistItems", id, patch); safeRender(); }
+  async function toggleChecklist(id, done){ await safeUpdate("checklistItems", id, {done}); safeRender(); }
+  async function deleteChecklistItem(id){ await safeDelete("checklistItems", id); safeRender(); }
+
+  async function addInboxItem(text, assetId){
+    if(!text.trim() && !assetId) return;
+    await safeAdd("inboxItems", {type: assetId?"image":"note", text:(text||"").trim(), assetId: assetId||null, createdAt: nowISO(), filedTo:null});
+  }
+  async function fileInboxItem(id, detailId){
+    await safeUpdate("inboxItems", id, {filedTo: detailId});
+    showToast("Filed to " + detailPath(detailId));
+  }
+  async function discardInboxItem(id){
+    if(!confirm("Discard this inbox item?")) return;
+    await safeDelete("inboxItems", id);
+  }
+
+  // ---- Phase 2: mood board / reference collection / color palette ----
+  async function addBoardImage(detailId, boardType, assetId, sourceUrl, notes){
+    if(!assetId && !sourceUrl) return;
+    await safeAdd("boardImages", {detailId, boardType, assetId: assetId||null, sourceUrl: sourceUrl||null, notes:(notes||"").trim(), createdAt: nowISO()});
+  }
+  async function updateBoardImage(id, patch){ await safeUpdate("boardImages", id, patch); safeRender(); }
+  async function deleteBoardImage(id){ await safeDelete("boardImages", id); safeRender(); }
+
+  async function addSwatch(detailId, hex, label){
+    await safeAdd("paletteSwatches", {detailId, hex: hex||"#9D8B5E", label:(label||"").trim(), createdAt: nowISO()});
+  }
+  async function updateSwatch(id, patch){ await safeUpdate("paletteSwatches", id, patch); safeRender(); }
+  async function deleteSwatch(id){ await safeDelete("paletteSwatches", id); safeRender(); }
+
+  // ---- Phase 3: progress photos ----
+  async function addProgressPhoto(detailId, phase, assetId, notes){
+    if(!assetId) return;
+    await safeAdd("progressPhotos", {detailId, phase, assetId, notes:(notes||"").trim(), createdAt: nowISO()});
+  }
+  async function deleteProgressPhoto(id){ await safeDelete("progressPhotos", id); safeRender(); }
+
+  // ---- Phase 4: receipts ----
+  async function hashFile(file){
+    try {
+      const buf = await file.arrayBuffer();
+      const digest = await crypto.subtle.digest("SHA-256", buf);
+      return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("");
+    } catch(e){ return null; } // hashing is a nice-to-have; never block an upload on it
+  }
+
+  function findDuplicateReceipt(hash){
+    if (!hash) return null;
+    return listOf(state.receipts).find(r=>r.imageHash===hash) || null;
+  }
+
+  function receiptLineItemsFor(receiptId){ return listOf(state.receiptLineItems).filter(i=>i.receiptId===receiptId).sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||"")); }
+  function pendingReceiptItems(){ return listOf(state.receiptLineItems).filter(i=>i.status==="pending"); }
+
+  async function maybeMarkReceiptLogged(receiptId){
+    const items = receiptLineItemsFor(receiptId);
+    if (items.length && items.every(i=> i.status==="assigned"||i.status==="dismissed")){
+      await safeUpdate("receipts", receiptId, {status:"logged"});
+    }
+  }
+
+  async function assignReceiptLineItem(itemId, detailId){
+    const item = state.receiptLineItems[itemId];
+    if (!item || !detailId) return;
+    const receipt = state.receipts[item.receiptId];
+    await safeAdd("lineItems", {
+      detailId, description: item.description, cost: Number(item.amount)||0, vendor:"",
+      date: (receipt?.uploadedAt || nowISO()).slice(0,10),
+      receiptAssetId: receipt?.assetId || null, createdAt: nowISO()
+    });
+    await safeUpdate("receiptLineItems", itemId, {status:"assigned", assignedDetailId: detailId});
+    await maybeMarkReceiptLogged(item.receiptId);
+    showToast("Assigned to " + detailPath(detailId));
+  }
+  async function dismissReceiptLineItem(itemId){
+    const item = state.receiptLineItems[itemId];
+    if (!item) return;
+    await safeUpdate("receiptLineItems", itemId, {status:"dismissed"});
+    await maybeMarkReceiptLogged(item.receiptId);
+  }
+  async function addManualReceiptItem(receiptId, desc, amount){
+    if (!desc.trim()) return;
+    await safeAdd("receiptLineItems", {receiptId, description:desc.trim(), amount:Number(amount)||0, status:"pending", createdAt: nowISO()});
+    // adding a new pending item means it's no longer fully logged
+    await safeUpdate("receipts", receiptId, {status:"new"});
+  }
+  async function deleteReceipt(id){
+    if(!confirm("Delete this receipt and its extracted items? Any spend already assigned from it stays put.")) return;
+    const items = receiptLineItemsFor(id);
+    await Promise.all(items.map(i=>safeDelete("receiptLineItems", i.id)));
+    await safeDelete("receipts", id);
+  }
+
+  // Best-effort client-side OCR via tesseract.js (loaded from the CDN allowlist).
+  // No network call ever leaves this page except fetching that library — the
+  // image itself is recognized locally in the browser. If it fails to load or
+  // errors out, the receipt just sits with no auto-extracted items and can be
+  // filled in by hand — nothing here blocks on it.
+  let tesseractLoadPromise = null;
+  function loadTesseract(){
+    if (window.Tesseract) return Promise.resolve(window.Tesseract);
+    if (tesseractLoadPromise) return tesseractLoadPromise;
+    tesseractLoadPromise = new Promise((resolve, reject)=>{
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+      s.onload = ()=> window.Tesseract ? resolve(window.Tesseract) : reject(new Error("OCR library loaded but not found"));
+      s.onerror = ()=> reject(new Error("Couldn't load the OCR library"));
+      document.head.appendChild(s);
+    });
+    return tesseractLoadPromise;
+  }
+
+  function parseReceiptLines(text){
+    const lines = (text||"").split("\n").map(l=>l.trim()).filter(Boolean);
+    const priceRe = /(\d{1,4}\.\d{2})\s*$/;
+    const skipWords = /subtotal|^total|grand total|\btax\b|change due|cash|visa|mastercard|amex|discover|debit|credit|balance|tender|approved|auth\s*code|card\s*#|thank you|store\s*#|receipt\s*#/i;
+    const items = [];
+    for (const line of lines){
+      if (skipWords.test(line)) continue;
+      const m = line.match(priceRe);
+      if (!m) continue;
+      const amount = parseFloat(m[1]);
+      if (!(amount>0 && amount<5000)) continue;
+      let desc = line.slice(0, m.index).replace(/[-–—.\s]+$/,"").trim();
+      if (!desc || desc.length<2) desc = "Item";
+      items.push({desc, amount});
+    }
+    return items;
+  }
+
+  async function runOCR(receiptId){
+    const receipt = state.receipts[receiptId];
+    if (!receipt) return;
+    await safeUpdate("receipts", receiptId, {status:"processing", ocrError:null});
+    safeRender();
+    try {
+      const Tesseract = await loadTesseract();
+      const result = await Tesseract.recognize("/_blob/"+receipt.assetId, "eng");
+      const text = (result && result.data && result.data.text) || "";
+      const found = parseReceiptLines(text);
+      await safeUpdate("receipts", receiptId, {status:"new", ocrText: text, ocrError: found.length?null:"Scanned it, but couldn't confidently pick out line items — add them by hand below."});
+      for (const it of found){
+        await safeAdd("receiptLineItems", {receiptId, description: it.desc, amount: it.amount, status:"pending", createdAt: nowISO()});
+      }
+      if (!found.length) showToast("Scanned — no clear line items found, add them manually.");
+    } catch(err){
+      console.error("OCR failed", err);
+      await safeUpdate("receipts", receiptId, {status:"new", ocrError:"OCR couldn't run in this browser — add items by hand below."});
+      showToast("OCR didn't work this time — you can still add items manually.");
+    }
+    safeRender();
+  }
+
+  async function uploadReceipt(file){
+    if (!file || !assetsCap){ showToast("Photo upload isn't available right now."); return; }
+    const hash = await hashFile(file);
+    const dupe = findDuplicateReceipt(hash);
+    if (dupe){
+      const proceed = confirm("This looks like a receipt you've already uploaded (" + fmtDate(dupe.uploadedAt) + "). Upload it again anyway?");
+      if (!proceed) return;
+    }
+    let assetId;
+    try { const res = await assetsCap.upload(file); assetId = res.id; }
+    catch(e){ showToast("Receipt upload failed."); return; }
+    const ref = await safeAdd("receipts", {assetId, uploadedAt: nowISO(), imageHash: hash, status:"new", ocrText:"", ocrError:null});
+    if (!ref) return;
+    runOCR(ref.id); // fire and forget — it updates the store as it goes
+  }
+
+  // ---------- render ----------
+  function render(){
+    const app = document.getElementById("app");
+    app.innerHTML = headerHTML() + bodyHTML() + fabHTML() + modalHTML() + toastHTML();
+    wireEvents();
+  }
+
+  function headerHTML(){
+    const inboxCount = ui.dbAvailable ? unfiledInbox().length : 0;
+    const pendingReceiptCount = ui.dbAvailable ? pendingReceiptItems().length : 0;
+    const tabs = [["houses","Houses"],["inbox","Inbox"],["horizon","Horizon"],["receipts","Receipts"],["overview","Overview"]];
+    return `
+      <header class="top">
+        <h1><span class="house-emoji">🏠</span>House Projects Hub</h1>
+        <nav class="tabs">
+          ${tabs.map(([id,label])=>`
+            <button data-tab="${id}" class="${ui.tab===id?'active':''}">${label}${id==='inbox'&&inboxCount?`<span class="badge-count">${inboxCount}</span>`:''}${id==='receipts'&&pendingReceiptCount?`<span class="badge-count">${pendingReceiptCount}</span>`:''}</button>
+          `).join("")}
+        </nav>
+      </header>`;
+  }
+
+  function bodyHTML(){
+    if (ui.dbAvailable === false){
+      return `<div class="sync-banner">This view can't reach the persistent store, so nothing will save yet. Try reopening from the chat, or ask Claude to republish.</div>` + emptyShell();
+    }
+    if (ui.dbAvailable === null){
+      return `<div class="empty-state"><div class="big-emoji">🏠</div>Loading your houses…</div>`;
+    }
+    if (ui.openDetail && state.details[ui.openDetail]) return detailPageHTML(state.details[ui.openDetail]);
+    if (ui.tab==="houses") return housesTabHTML();
+    if (ui.tab==="inbox") return inboxTabHTML();
+    if (ui.tab==="horizon") return horizonTabHTML();
+    if (ui.tab==="receipts") return receiptsTabHTML();
+    if (ui.tab==="overview") return overviewTabHTML();
+    return "";
+  }
+  function emptyShell(){ return `<div class="empty-state"><div class="big-emoji">🏠</div>Once connected, your houses will show up here.</div>`; }
+
+  // ---- Houses tab ----
+  function housesTabHTML(){
+    const houses = listOf(state.houses).sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||""));
+    let html = "";
+    if (!houses.length){
+      html += `<div class="empty-state"><div class="big-emoji">🏡</div>No houses yet.<br>Add your first one to start breaking it down into rooms and details.</div>`;
+    } else {
+      houses.forEach(h=>{
+        const open = ui.expandedHouses.has(h.id);
+        const rollup = houseRollup(h.id);
+        html += `<div class="card house-card" data-house-card="${h.id}">
+          <div class="house-head" data-toggle-house="${h.id}">
+            <div class="house-title">
+              <span class="chev ${open?'open':''}">▸</span>
+              <div style="min-width:0;flex:1">
+                <input class="house-name-input" data-house-id="${h.id}" value="${esc(h.name)}">
+                <input class="house-address-input" data-house-id="${h.id}" value="${esc(h.address||'')}" placeholder="Address (optional)">
+              </div>
+            </div>
+            <div class="house-stats">
+              ${rollup.count} detail${rollup.count===1?'':'s'}<br>
+              ${money(rollup.actual)} spent${rollup.rough?` · ${money(rollup.rough)} planned`:''}
+            </div>
+          </div>
+          ${open?houseBodyHTML(h):""}
+        </div>`;
+      });
+    }
+    html += `<div class="add-row-btns"><button class="ghost" data-open-add-house="1">+ Add house</button></div>`;
+    return html;
+  }
+
+  function houseBodyHTML(h){
+    const rooms = roomsForHouse(h.id).sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||""));
+    const directDetails = detailsDirectOnHouse(h.id).sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||""));
+    let html = `<div class="house-body">`;
+    rooms.forEach(r=>{
+      const ds = detailsForRoom(r.id).sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||""));
+      const rr = roomRollup(r.id);
+      html += `<div class="room-block">
+        <div class="room-head">
+          <input class="room-name-input" data-room-id="${r.id}" value="${esc(r.name)}">
+          <span style="font-size:0.72rem;color:var(--text-faint)">
+            ${money(rr.actual)}${rr.rough?` / ${money(rr.rough)} planned`:''}
+            <button class="icon-btn" data-delete-room="${r.id}" title="Delete room">✕</button>
+          </span>
+        </div>
+        ${ds.length?ds.map(d=>detailRowHTML(d)).join(""):`<div class="empty-note">No details yet.</div>`}
+        <div class="add-row-btns"><button class="ghost" data-open-add-detail="${h.id}|${r.id}">+ Add detail</button></div>
+      </div>`;
+    });
+    // details directly on house
+    html += `<div class="room-block">
+      <div class="room-head"><span class="room-name">${rooms.length?'Not in a specific room':'Details'}</span></div>
+      ${directDetails.length?directDetails.map(d=>detailRowHTML(d)).join(""):`<div class="empty-note">${rooms.length?'Nothing loose here.':'No details yet.'}</div>`}
+    </div>`;
+    html += `<div class="add-row-btns">
+      <button class="ghost" data-open-add-room="${h.id}">+ Add room</button>
+      <button class="ghost" data-open-add-detail="${h.id}|">+ Add detail</button>
+      <button class="ghost" data-delete-house="${h.id}" style="margin-left:auto;color:var(--danger);border-color:var(--danger-soft)">Delete house</button>
+    </div>`;
+    html += `</div>`;
+    return html;
+  }
+
+  function detailRowHTML(d){
+    const rough = roughCost(d.id), actual = actualCost(d.id);
+    const tf = d.timeframeGranularity ? `${GRAN_LABEL[d.timeframeGranularity]}: ${esc(d.timeframeValue||"—")}` : "";
+    return `<div class="detail-row" data-open-detail="${d.id}">
+      <div>
+        <div class="detail-name">${esc(d.name)}</div>
+        <div class="detail-meta">
+          <span class="status-pill status-${d.status||'not_started'}">${STATUS_LABEL[d.status||'not_started']}</span>
+          ${tf?`<span>${tf}</span>`:""}
+          ${actual||rough?`<span>${money(actual)}${rough?` / ${money(rough)}`:''}</span>`:""}
+        </div>
+      </div>
+      <span style="color:var(--text-faint)">›</span>
+    </div>`;
+  }
+
+  // ---- Inbox tab ----
+  function inboxTabHTML(){
+    const items = unfiledInbox();
+    let html = `<div class="card card-pad" style="margin-bottom:1rem">
+      <div class="section-title" style="margin-bottom:0.6rem">Quick capture</div>
+      <div class="field"><textarea id="quickAddText" rows="2" placeholder="A stray thought, a material, a link…"></textarea></div>
+      <div class="inline-add-form">
+        <input type="file" id="quickAddPhoto" accept="image/*" style="flex:1">
+        <button class="primary" id="quickAddSubmit">Add to inbox</button>
+      </div>
+    </div>`;
+    if (!items.length){
+      html += `<div class="empty-state"><div class="big-emoji">📥</div>Inbox is empty. Whatever you capture on the fly lands here until you're ready to file it.</div>`;
+    } else {
+      html += `<div class="card">`;
+      items.forEach((it,idx)=>{
+        html += inboxItemHTML(it, idx===items.length-1);
+      });
+      html += `</div>`;
+    }
+    return html;
+  }
+
+  function inboxItemHTML(it, isLast){
+    const nd = ui.newDetailUI[it.id] || {};
+    return `<div class="inbox-item" style="${isLast?'':'border-bottom:1px solid var(--border)'}">
+      ${it.assetId?`<img class="inbox-photo" src="/_blob/${it.assetId}" alt="">`:`<div class="inbox-photo" style="display:flex;align-items:center;justify-content:center;background:var(--surface-2);border-radius:8px">📝</div>`}
+      <div class="inbox-item-body">
+        <div class="inbox-item-text">${esc(it.text)||"<i style='color:var(--text-faint)'>(photo only)</i>"}</div>
+        <div class="inbox-item-time">${fmtDate(it.createdAt)}</div>
+        <div class="inbox-actions">
+          <button class="secondary" data-toggle-filepicker="${it.id}">File…</button>
+          <button class="icon-btn" data-discard-inbox="${it.id}">Discard</button>
+        </div>
+        <div class="file-picker ${ui.filingItem===it.id?'open':''}">
+          <div class="field">
+            <label class="field-label">File to existing detail</label>
+            <select data-file-select="${it.id}">
+              <option value="">Choose a detail…</option>
+              ${listOf(state.details).sort((a,b)=>detailPath(a.id).localeCompare(detailPath(b.id))).map(d=>`<option value="${d.id}">${esc(detailPath(d.id))}</option>`).join("")}
+            </select>
+          </div>
+          <button class="link-btn" data-toggle-newdetail="${it.id}">${nd.open?'– cancel new detail':'+ or create a new detail for this'}</button>
+          <div class="new-detail-inline ${nd.open?'open':''}">
+            <input placeholder="House (existing or new)" list="houseList" data-nd-house="${it.id}" value="${esc(nd.house||'')}">
+            <input placeholder="Room (optional)" data-nd-room="${it.id}" value="${esc(nd.room||'')}">
+            <input placeholder="Detail name" data-nd-detail="${it.id}" value="${esc(nd.detail||'')}">
+            <button class="primary" data-file-new="${it.id}">Create &amp; file</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ---- Horizon tab ----
+  function horizonTabHTML(){
+    const order = ["day","week","month","quarter","year",""];
+    const details = listOf(state.details);
+    const buckets = {};
+    details.forEach(d=>{
+      const g = d.timeframeGranularity || "";
+      const key = g + "||" + (g? (d.timeframeValue||"") : "");
+      if(!buckets[key]) buckets[key] = {gran:g, value:d.timeframeValue||"", items:[]};
+      buckets[key].items.push(d);
+    });
+    const keys = Object.keys(buckets).sort((a,b)=>{
+      const A=buckets[a], B=buckets[b];
+      const oi = order.indexOf(A.gran) - order.indexOf(B.gran);
+      if(oi!==0) return oi;
+      return (A.value||"").localeCompare(B.value||"");
+    });
+    if(!details.length){
+      return `<div class="empty-state"><div class="big-emoji">🗓️</div>Nothing scheduled yet — timeframes you set on a detail will show up here, grouped from soonest to someday.</div>`;
+    }
+    let html = "";
+    keys.forEach(k=>{
+      const b = buckets[k];
+      const label = b.gran ? `${GRAN_LABEL[b.gran]}: ${b.value||"—"}` : "Someday / unscheduled";
+      html += `<div class="horizon-group"><h3>${esc(label)}</h3>`;
+      b.items.sort((x,y)=>x.name.localeCompare(y.name)).forEach(d=>{
+        html += `<div class="horizon-item" data-open-detail="${d.id}">
+          <div>
+            <div style="font-weight:600;font-size:0.88rem">${esc(d.name)}</div>
+            <div class="breadcrumb">${esc(detailPath(d.id))}</div>
+          </div>
+          <span class="status-pill status-${d.status||'not_started'}">${STATUS_LABEL[d.status||'not_started']}</span>
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    return html;
+  }
+
+  // ---- Receipts tab ----
+  function receiptsTabHTML(){
+    const receipts = listOf(state.receipts).sort((a,b)=>(b.uploadedAt||"").localeCompare(a.uploadedAt||""));
+    let html = `<div class="card card-pad" style="margin-bottom:1rem">
+      <div class="section-title" style="margin-bottom:0.5rem">Upload a receipt</div>
+      <div class="inline-add-form">
+        <input type="file" id="receiptUpload" accept="image/*" style="flex:1">
+        <button class="primary" id="receiptUploadBtn">Upload &amp; scan</button>
+      </div>
+      <div class="scratchpad-help" style="margin-top:0.4rem">Runs OCR right in the browser to pull out line items — it's imperfect, so review what it finds. Uploading the same photo twice gets flagged.</div>
+    </div>`;
+    if (!receipts.length){
+      return html + `<div class="empty-state"><div class="big-emoji">🧾</div>No receipts yet.</div>`;
+    }
+    html += receipts.map(r=>receiptCardHTML(r)).join("");
+    return html;
+  }
+
+  function receiptCardHTML(r){
+    const items = receiptLineItemsFor(r.id);
+    const pending = items.filter(i=>i.status==="pending");
+    const statusLabel = {new:"New", processing:"Scanning…", logged:"Logged"}[r.status] || r.status;
+    const statusClass = r.status==="logged" ? "status-done" : r.status==="processing" ? "status-in_progress" : "status-not_started";
+    return `<div class="card" style="margin-bottom:0.9rem">
+      <div style="display:flex;gap:0.8rem;padding:0.9rem">
+        <img src="/_blob/${r.assetId}" style="width:4.5rem;height:4.5rem;object-fit:cover;border-radius:8px;border:1px solid var(--border);flex-shrink:0">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem">
+            <div style="font-size:0.82rem;color:var(--text-muted)">${fmtDate(r.uploadedAt)}</div>
+            <span class="status-pill ${statusClass}">${statusLabel}</span>
+          </div>
+          <div style="font-size:0.78rem;color:var(--text-faint);margin-top:0.15rem">
+            ${items.length ? `${items.length} item${items.length===1?'':'s'} found — ${pending.length} to review` : (r.status==="processing" ? "Scanning for line items…" : "No items extracted yet")}
+          </div>
+          ${r.ocrError?`<div style="font-size:0.74rem;color:var(--warn);margin-top:0.2rem">${esc(r.ocrError)}</div>`:""}
+          <div style="margin-top:0.4rem;display:flex;gap:0.7rem;flex-wrap:wrap;align-items:center">
+            <button class="link-btn" data-rescan="${r.id}">${items.length?'Re-scan':'Run OCR'}</button>
+            <button class="link-btn" data-toggle-manual-item="${r.id}">+ Add item manually</button>
+            <button class="icon-btn" data-delete-receipt="${r.id}" title="Delete receipt">✕</button>
+          </div>
+          <div class="new-detail-inline ${ui.manualItemOpen===r.id?'open':''}" id="manualItemForm-${r.id}">
+            <input placeholder="Item description" id="manualItemDesc-${r.id}">
+            <input placeholder="Amount" type="number" step="any" id="manualItemAmount-${r.id}">
+            <button class="primary" data-add-manual-submit="${r.id}">Add item</button>
+          </div>
+        </div>
+      </div>
+      ${items.length?`<div style="padding:0 0.9rem 0.9rem">${items.map(i=>receiptLineItemHTML(i)).join("")}</div>`:""}
+    </div>`;
+  }
+
+  function receiptLineItemHTML(i){
+    if (i.status==="dismissed"){
+      return `<div class="list-item" style="opacity:0.55"><div class="list-item-main">${esc(i.description)} — ${money(i.amount)} <span style="font-size:0.7rem">(dismissed)</span></div></div>`;
+    }
+    if (i.status==="assigned"){
+      return `<div class="list-item" style="opacity:0.8"><div class="list-item-main">${esc(i.description)} — ${money(i.amount)} <span style="font-size:0.7rem;color:var(--good)">✓ ${esc(detailPath(i.assignedDetailId))}</span></div></div>`;
+    }
+    return `<div class="list-item">
+      <div class="list-item-main">
+        ${esc(i.description)} — ${money(i.amount)}
+        <div class="inline-add-form" style="margin-top:0.35rem">
+          <select data-assign-rli="${i.id}">
+            <option value="">Assign to detail…</option>
+            ${listOf(state.details).sort((a,b)=>detailPath(a.id).localeCompare(detailPath(b.id))).map(d=>`<option value="${d.id}">${esc(detailPath(d.id))}</option>`).join("")}
+          </select>
+          <button class="secondary" data-dismiss-rli="${i.id}">Dismiss</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ---- Overview tab ----
+  function inCurrentMonth(dateStr){
+    if(!dateStr) return false;
+    const d = new Date(dateStr+"T00:00:00"), now = new Date();
+    return !isNaN(d) && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+  }
+  function inCurrentQuarter(dateStr){
+    if(!dateStr) return false;
+    const d = new Date(dateStr+"T00:00:00"), now = new Date();
+    return !isNaN(d) && d.getFullYear()===now.getFullYear() && Math.floor(d.getMonth()/3)===Math.floor(now.getMonth()/3);
+  }
+  function overviewTabHTML(){
+    const details = listOf(state.details);
+    if (!details.length){
+      return `<div class="empty-state"><div class="big-emoji">📊</div>Add a house and some details to see your overview here.</div>`;
+    }
+    const allLines = listOf(state.lineItems);
+    const monthTotal = allLines.filter(l=>inCurrentMonth(l.date)).reduce((s,l)=>s+(Number(l.cost)||0),0);
+    const quarterTotal = allLines.filter(l=>inCurrentQuarter(l.date)).reduce((s,l)=>s+(Number(l.cost)||0),0);
+    const overBudget = details.filter(d=>{
+      const est = (d.estimatedSpend===null||d.estimatedSpend===undefined||d.estimatedSpend==="") ? roughCost(d.id) : Number(d.estimatedSpend);
+      return est>0 && actualCost(d.id)>est;
+    });
+    const gaps = listOf(state.materialItems).filter(m=> m.status==="idea"||m.status==="need_to_source");
+    const upcoming = details.filter(d=> ["day","week","month"].includes(d.timeframeGranularity))
+      .sort((a,b)=> (a.timeframeValue||"").localeCompare(b.timeframeValue||""));
+
+    let html = `<div class="ov-stats">
+      <div class="ov-stat"><div class="ov-stat-num">${details.length}</div><div class="ov-stat-label">Active details</div></div>
+      <div class="ov-stat"><div class="ov-stat-num">${money(monthTotal)}</div><div class="ov-stat-label">Spent this month</div></div>
+      <div class="ov-stat"><div class="ov-stat-num">${money(quarterTotal)}</div><div class="ov-stat-label">Spent this quarter</div></div>
+      <div class="ov-stat"><div class="ov-stat-num">${unfiledInbox().length}</div><div class="ov-stat-label">Unfiled in inbox</div></div>
+    </div>`;
+
+    html += `<div class="panel-grid">
+      <div class="panel-card">
+        <h4>⚠️ Over budget (${overBudget.length})</h4>
+        ${overBudget.length?overBudget.map(d=>`
+          <div class="horizon-item" data-open-detail="${d.id}">
+            <div><div style="font-weight:600;font-size:0.88rem">${esc(d.name)}</div><div class="breadcrumb">${esc(detailPath(d.id))}</div></div>
+            <span style="color:var(--danger);font-weight:700;font-size:0.82rem">${money(actualCost(d.id))}</span>
+          </div>`).join(""):`<div class="empty-note">Nothing over budget right now.</div>`}
+      </div>
+      <div class="panel-card">
+        <h4>🧾 Materials needing sourcing (${gaps.length})</h4>
+        ${gaps.length?gaps.slice(0,12).map(m=>`
+          <div class="list-item"><div class="list-item-main">${esc(m.description)}<div class="list-item-sub">${esc(detailPath(m.detailId))}</div></div></div>`).join(""):`<div class="empty-note">No open gaps.</div>`}
+      </div>
+      <div class="panel-card span2">
+        <h4>🗓️ Coming up soon</h4>
+        ${upcoming.length?upcoming.map(d=>`
+          <div class="horizon-item" data-open-detail="${d.id}">
+            <div><div style="font-weight:600;font-size:0.88rem">${esc(d.name)}</div><div class="breadcrumb">${esc(detailPath(d.id))} · ${GRAN_LABEL[d.timeframeGranularity]}: ${esc(d.timeframeValue||"—")}</div></div>
+            <span class="status-pill status-${d.status||'not_started'}">${STATUS_LABEL[d.status||'not_started']}</span>
+          </div>`).join(""):`<div class="empty-note">Nothing scheduled for the near term.</div>`}
+      </div>
+    </div>`;
+    return html;
+  }
+
+  // ---- FAB ----
+  function fabHTML(){
+    if (ui.dbAvailable === false) return "";
+    return `<button class="fab" id="fabQuickAdd" title="Quick add to inbox">+</button>`;
+  }
+
+  // ---- Modals ----
+  function modalHTML(){
+    let html = "";
+    if (ui.quickAddOpen) html += quickAddModalHTML();
+    if (ui.addHouseOpen) html += addHouseModalHTML();
+    if (ui.addRoomFor) html += addRoomModalHTML(ui.addRoomFor);
+    if (ui.addDetailFor) html += addDetailModalHTML(ui.addDetailFor);
+    return html;
+  }
+
+  function backdrop(inner){ return `<div class="modal-backdrop" data-close-modal="1"><div class="modal" data-stop="1">${inner}</div></div>`; }
+
+  function addHouseModalHTML(){
+    return backdrop(`
+      <div class="modal-header"><b>Add a house</b><button class="modal-close" data-close-modal="1">✕</button></div>
+      <div class="modal-body">
+        <div class="field"><label class="field-label">Name</label><input id="newHouseName" placeholder="e.g. Sea Cliff house" autofocus></div>
+        <div class="field"><label class="field-label">Address (optional)</label><input id="newHouseAddress" placeholder="12 20th Avenue"></div>
+        <button class="primary" id="submitAddHouse">Add house</button>
+      </div>`);
+  }
+  function addRoomModalHTML(houseId){
+    const h = state.houses[houseId];
+    return backdrop(`
+      <div class="modal-header"><b>Add a room — ${esc(h?h.name:"")}</b><button class="modal-close" data-close-modal="1">✕</button></div>
+      <div class="modal-body">
+        <div class="field"><label class="field-label">Room / area name</label><input id="newRoomName" placeholder="e.g. Exterior, Kitchen, Master bedroom" autofocus></div>
+        <button class="primary" id="submitAddRoom" data-house="${houseId}">Add room</button>
+      </div>`);
+  }
+  function addDetailModalHTML(key){
+    const [houseId, roomId] = key.split("|");
+    const h = state.houses[houseId]; const r = roomId?state.rooms[roomId]:null;
+    return backdrop(`
+      <div class="modal-header"><b>Add a detail — ${esc(h?h.name:"")}${r?" / "+esc(r.name):""}</b><button class="modal-close" data-close-modal="1">✕</button></div>
+      <div class="modal-body">
+        <div class="field"><label class="field-label">Detail name</label><input id="newDetailName" placeholder="e.g. Shutters, Cabinets, Closet" autofocus></div>
+        <button class="primary" id="submitAddDetail" data-house="${houseId}" data-room="${roomId||""}">Add detail</button>
+      </div>`);
+  }
+
+  function quickAddModalHTML(){
+    return backdrop(`
+      <div class="modal-header"><b>Quick capture</b><button class="modal-close" data-close-modal="1">✕</button></div>
+      <div class="modal-body">
+        <div class="field"><textarea id="fabQuickText" rows="3" placeholder="Type a thought…" autofocus></textarea></div>
+        <div class="field"><label class="field-label">Or add a photo</label><input type="file" id="fabQuickPhoto" accept="image/*"></div>
+        <button class="primary" id="fabQuickSubmit">Add to inbox</button>
+      </div>`);
+  }
+
+  function detailPageHTML(d){
+    const h = state.houses[d.houseId]; const r = d.roomId ? state.rooms[d.roomId] : null;
+    const mats = materialsFor(d.id);
+    const lines = lineItemsFor(d.id);
+    const cks = checklistFor(d.id);
+    const filed = inboxFiledTo(d.id);
+    const moodImgs = boardImagesFor(d.id, "mood");
+    const refImgs = boardImagesFor(d.id, "reference");
+    const swatches = swatchesFor(d.id);
+    const pendingRli = pendingReceiptItems();
+    const rough = roughCost(d.id), actual = actualCost(d.id);
+    const estVal = (d.estimatedSpend===null || d.estimatedSpend===undefined || d.estimatedSpend==="") ? rough : Number(d.estimatedSpend);
+    const houses = listOf(state.houses);
+    const roomsOfCurrentHouse = roomsForHouse(d.houseId);
+
+    const statusColor = {not_started:"var(--text-faint)", in_progress:"var(--warn)", done:"var(--good)", on_hold:"var(--danger)"}[d.status||"not_started"];
+    const doneCount = cks.filter(c=>c.done).length;
+    const ckPct = cks.length ? Math.round(doneCount/cks.length*100) : 0;
+    const maxBar = Math.max(estVal, actual, 1);
+    const estPct = Math.min(100, Math.round((estVal/maxBar)*100));
+    const actPct = Math.min(100, Math.round((actual/maxBar)*100));
+    const overBudget = estVal>0 && actual>estVal;
+
+    return `
+    <div class="detail-page">
+      <div class="db-backbar"><button id="backToListBtn">‹ Back</button></div>
+
+      <div class="db-hero" style="--status-color:${statusColor}">
+        <div class="db-breadcrumb">${esc(h?h.name:"")}${r?" / "+esc(r.name):""}</div>
+        <input id="detailNameInput" class="db-name-input" value="${esc(d.name)}">
+
+        <div class="db-hero-meta">
+          <select id="detailStatus" class="db-status-select status-${d.status||'not_started'}">
+            ${Object.entries(STATUS_LABEL).map(([k,v])=>`<option value="${k}" ${d.status===k?'selected':''}>${v}</option>`).join("")}
+          </select>
+          <select id="detailGran">
+            ${Object.entries(GRAN_LABEL).map(([k,v])=>`<option value="${k}" ${((d.timeframeGranularity||"")===k)?'selected':''}>${v}</option>`).join("")}
+          </select>
+          ${timeframeValueInput(d.timeframeGranularity, d.timeframeValue)}
+        </div>
+
+        <div class="db-budget">
+          <div class="db-bar-row">
+            <span class="db-bar-label">Estimated</span>
+            <div class="db-bar-track"><div class="db-bar-fill" style="width:${estPct}%;background:var(--accent-strong)"></div></div>
+            <span class="db-bar-value">${money(estVal)}</span>
+          </div>
+          <div class="db-bar-row">
+            <span class="db-bar-label">Actual</span>
+            <div class="db-bar-track"><div class="db-bar-fill" style="width:${actPct}%;background:${overBudget?'var(--danger)':'var(--good)'}"></div></div>
+            <span class="db-bar-value">${money(actual)}</span>
+          </div>
+          <div class="db-bar-row" style="align-items:center">
+            <span class="db-bar-label">Override</span>
+            <input id="estimatedSpendInput" type="number" min="0" step="any" value="${estVal}" style="width:7rem;padding:0.25rem 0.5rem;font-weight:700">
+            <span class="db-bar-value" style="color:${overBudget?'var(--danger)':'var(--text-muted)'}">${overBudget?'+':''}${money(actual-estVal)}</span>
+          </div>
+        </div>
+
+        ${cks.length?`<div class="db-checklist-progress-wrap">
+          <div style="display:flex;justify-content:space-between;font-size:0.76rem;color:var(--text-muted);margin-bottom:0.25rem">
+            <span>Checklist</span><span>${doneCount}/${cks.length} done</span>
+          </div>
+          <div class="db-checklist-progress-track"><div class="db-checklist-progress-fill" style="width:${ckPct}%"></div></div>
+        </div>`:""}
+      </div>
+
+      <div class="panel-grid">
+
+        <div class="panel-card span2">
+          <h4>📐 Scratchpad <span id="scratchpadSaveState" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.72rem;color:var(--text-faint);margin-left:auto"></span></h4>
+          <div class="scratchpad-wrap">
+            <textarea id="scratchpadInput" placeholder="board_length = 12&#10;panel_length = 4&#10;panels_per_board = board_length / panel_length&#10;panels_needed = 16&#10;boards_needed = ceil(panels_needed / panels_per_board)">${esc(d.scratchpad||"")}</textarea>
+            <div class="scratchpad-preview" id="scratchpadPreview">${renderScratchpad(d.scratchpad||"")}</div>
+            <div class="scratchpad-help">Basic math per line — name = expression, or just an expression. Use ceil(), floor(), round() to round up/down. Lines starting with # are notes.</div>
+            <div><button class="link-btn" id="suggestMaterialsBtn">↳ Suggest materials from scratchpad</button></div>
+            <div id="suggestPanel"></div>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <h4>🧾 Materials plan</h4>
+          ${mats.length?mats.map(m=>materialRowHTML(m)).join(""):`<div class="empty-note">No materials roughed out yet.</div>`}
+          <div class="inline-add-form">
+            <input id="matDesc" placeholder="Item">
+            <input id="matQty" placeholder="Qty" style="max-width:4.5rem" type="number" min="0" step="any" value="1">
+            <input id="matCost" placeholder="Unit $" style="max-width:6rem" type="number" min="0" step="any">
+            <button class="secondary" id="addMaterialBtn">Add</button>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <h4>💳 Actual spend</h4>
+          ${lines.length?lines.map(l=>lineItemRowHTML(l)).join(""):`<div class="empty-note">Nothing logged yet.</div>`}
+          <div class="inline-add-form">
+            <input id="lineDesc" placeholder="Description">
+            <input id="lineCost" placeholder="$" style="max-width:6rem" type="number" min="0" step="any">
+          </div>
+          <div class="inline-add-form">
+            <input id="lineVendor" placeholder="Vendor (optional)">
+            <input id="lineDate" type="date" style="max-width:9.5rem" value="${new Date().toISOString().slice(0,10)}">
+          </div>
+          <div class="inline-add-form">
+            <input type="file" id="lineReceipt" accept="image/*" style="flex:1">
+            <button class="secondary" id="addLineBtn">Log spend</button>
+          </div>
+        </div>
+
+        ${pendingRli.length?`<div class="panel-card span2">
+          <h4>🧾 Unassigned receipt items (${pendingRli.length})</h4>
+          ${pendingRli.map(i=>{
+            const rr = state.receipts[i.receiptId];
+            return `<div class="list-item">
+              <div class="list-item-main">${esc(i.description)} — ${money(i.amount)}<div class="list-item-sub">from receipt ${rr?fmtDate(rr.uploadedAt):''}</div></div>
+              <div style="display:flex;gap:0.4rem;flex-shrink:0">
+                <button class="secondary" data-assign-here="${i.id}">Assign here</button>
+                <button class="icon-btn" data-dismiss-rli="${i.id}">✕</button>
+              </div>
+            </div>`;
+          }).join("")}
+        </div>`:""}
+
+        <div class="panel-card">
+          <h4>✅ Checklist</h4>
+          ${cks.length?cks.map(c=>checklistRowHTML(c)).join(""):`<div class="empty-note">No sub-steps yet.</div>`}
+          <div class="inline-add-form">
+            <input id="ckText" placeholder="Add a step">
+            <button class="secondary" id="addCkBtn">Add</button>
+          </div>
+        </div>
+
+        <div class="panel-card span2">
+          <h4>🎨 Mood board</h4>
+          <div class="field" style="margin-bottom:0.7rem">
+            <label class="field-label">Pinterest board (reference link, not auto-synced)</label>
+            <input id="pinterestBoardUrl" placeholder="https://pinterest.com/you/board-name" value="${esc(d.pinterestBoardUrl||'')}">
+            ${d.pinterestBoardUrl?`<div style="margin-top:0.3rem"><a href="${esc(d.pinterestBoardUrl)}" target="_blank" rel="noopener" class="link-btn" style="text-decoration:underline">Open board ↗</a></div>`:""}
+          </div>
+          <div class="board-grid">
+            ${moodImgs.length?moodImgs.map(img=>boardImageHTML(img)).join(""):`<div class="empty-note">No images yet — pull in whatever's shaping the vision for this.</div>`}
+          </div>
+          <div class="inline-add-form">
+            <input type="file" id="moodFile" accept="image/*" style="flex:1">
+            <input id="moodUrl" placeholder="or paste an image URL">
+            <button class="secondary" id="addMoodBtn">Add</button>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <h4>🖌️ Color palette</h4>
+          <div class="swatch-row">
+            ${swatches.length?swatches.map(s=>swatchHTML(s)).join(""):`<div class="empty-note">No colors picked yet.</div>`}
+          </div>
+          <div class="inline-add-form">
+            <input type="color" id="newSwatchColor" value="#9D8B5E" style="max-width:3rem;padding:0.2rem">
+            <input id="newSwatchLabel" placeholder="Label (e.g. Trim)">
+            <button class="secondary" id="addSwatchBtn">Add</button>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <h4>🔧 Reference &amp; assembly</h4>
+          <div class="board-grid">
+            ${refImgs.length?refImgs.map(img=>boardImageHTML(img)).join(""):`<div class="empty-note">No "how it's built" references yet.</div>`}
+          </div>
+          <div class="inline-add-form">
+            <input type="file" id="refFile" accept="image/*" style="flex:1">
+            <input id="refUrl" placeholder="or paste an image URL">
+            <button class="secondary" id="addRefBtn">Add</button>
+          </div>
+        </div>
+
+        <div class="panel-card span2">
+          <h4>📸 Progress photos</h4>
+          <div class="progress-cols">
+            ${["before","during","after"].map(phase=>`
+              <div class="progress-col">
+                <div class="progress-col-title">${phase[0].toUpperCase()+phase.slice(1)}</div>
+                ${progressPhotosFor(d.id, phase).map(p=>`
+                  <div class="progress-photo-item">
+                    <img src="/_blob/${p.assetId}" class="progress-thumb" alt="">
+                    <button class="icon-btn" data-delete-progress="${p.id}">✕</button>
+                  </div>`).join("") || `<div class="empty-note">—</div>`}
+                <input type="file" accept="image/*" class="progress-file" data-phase="${phase}">
+              </div>`).join("")}
+          </div>
+        </div>
+
+        ${filed.length?`<div class="panel-card">
+          <h4>📥 Captured here</h4>
+          ${filed.map(it=>`<div class="list-item"><div class="list-item-main">${it.assetId?`<img class="receipt-thumb" src="/_blob/${it.assetId}"> `:''}${esc(it.text)}</div></div>`).join("")}
+        </div>`:""}
+
+        <div class="panel-card">
+          <h4>📍 Move</h4>
+          <div class="move-row">
+            <select id="moveHouse">
+              ${houses.map(hh=>`<option value="${hh.id}" ${hh.id===d.houseId?'selected':''}>${esc(hh.name)}</option>`).join("")}
+            </select>
+            <select id="moveRoom">
+              <option value="">No specific room</option>
+              ${roomsOfCurrentHouse.map(rr=>`<option value="${rr.id}" ${rr.id===d.roomId?'selected':''}>${esc(rr.name)}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+
+        <div class="panel-card span2" style="border-color:var(--danger-soft)">
+          <h4 style="color:var(--danger)">⚠️ Danger zone</h4>
+          <button class="ghost" style="color:var(--danger);border-color:var(--danger-soft)" id="deleteDetailBtn">Delete this detail</button>
+        </div>
+
+      </div>
+    </div>`;
+  }
+
+  // ---------- scratchpad math ----------
+  function evalMathExpr(expr){
+    let e = expr;
+    e = e.replace(/\b(ceil|floor|round|sqrt|abs|min|max)\s*\(/g, "Math.$1(");
+    const stripped = e.replace(/Math\.(ceil|floor|round|sqrt|abs|min|max)\(/g, "(");
+    if(!/^[0-9+\-*/().,\s]+$/.test(stripped) || !stripped.trim()) return null;
+    try {
+      // eslint-disable-next-line no-new-func
+      const val = Function('"use strict"; return (' + e + ')')();
+      return (typeof val === "number" && isFinite(val)) ? val : null;
+    } catch(err){ return null; }
+  }
+
+  function renderScratchpad(text){
+    const lines = (text||"").split("\n");
+    const vars = {};
+    let html = "";
+    let any = false;
+    lines.forEach(raw=>{
+      const trimmed = raw.trim();
+      if(!trimmed || trimmed.startsWith("#")){
+        html += `<div class="sp-line sp-comment">${esc(raw)||"&nbsp;"}</div>`;
+        return;
+      }
+      const m = trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$/);
+      let varName = null, exprRaw = trimmed;
+      if (m) { varName = m[1]; exprRaw = m[2]; }
+      let sub = exprRaw;
+      Object.keys(vars).sort((a,b)=>b.length-a.length).forEach(name=>{
+        sub = sub.replace(new RegExp("\\b"+name+"\\b","g"), vars[name]);
+      });
+      const val = evalMathExpr(sub);
+      if (val !== null){
+        any = true;
+        if (varName) vars[varName] = val;
+        const disp = Number.isInteger(val) ? val : Math.round(val*1000)/1000;
+        html += `<div class="sp-line"><span class="sp-src">${esc(raw)}</span><span class="sp-result">= ${disp}</span></div>`;
+      } else {
+        html += `<div class="sp-line sp-comment">${esc(raw)||"&nbsp;"}</div>`;
+      }
+    });
+    if (!any && !lines.some(l=>l.trim())) return `<div class="sp-line sp-comment">Results for math lines show up here as you type.</div>`;
+    return html;
+  }
+
+  function computeScratchpadVars(text){
+    const lines = (text||"").split("\n");
+    const vars = {}; const ordered = [];
+    lines.forEach(raw=>{
+      const trimmed = raw.trim();
+      if(!trimmed || trimmed.startsWith("#")) return;
+      const m = trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$/);
+      if(!m) return;
+      const name = m[1]; let sub = m[2];
+      Object.keys(vars).sort((a,b)=>b.length-a.length).forEach(n=>{
+        sub = sub.replace(new RegExp("\\b"+n+"\\b","g"), vars[n]);
+      });
+      const val = evalMathExpr(sub);
+      if (val !== null){
+        vars[name] = val;
+        ordered.push({name, value: Number.isInteger(val) ? val : Math.round(val*1000)/1000});
+      }
+    });
+    return ordered;
+  }
+
+  function humanizeVarName(name){
+    let s = name.replace(/_/g, " ").trim();
+    s = s.replace(/\s*needed$/i, "").replace(/\s*qty$/i, "").trim();
+    if (!s) s = name;
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  function timeframeValueInput(gran, value){
+    value = value || "";
+    if (gran==="day") return `<input id="detailTFValue" type="date" value="${esc(value)}">`;
+    if (gran==="week") return `<input id="detailTFValue" type="week" value="${esc(value)}">`;
+    if (gran==="month") return `<input id="detailTFValue" type="month" value="${esc(value)}">`;
+    if (gran==="quarter") return `<input id="detailTFValue" placeholder="e.g. 2026 Q4" value="${esc(value)}">`;
+    if (gran==="year") return `<input id="detailTFValue" type="number" placeholder="2027" value="${esc(value)}">`;
+    return `<input id="detailTFValue" disabled placeholder="—" value="">`;
+  }
+
+  function materialRowHTML(m){
+    const total = (Number(m.roughQuantity)||0)*(Number(m.roughUnitCost)||0);
+    return `<div class="list-item">
+      <div class="list-item-main">
+        <input class="mat-desc" data-mat-id="${m.id}" value="${esc(m.description)}" style="font-weight:600;padding:0.15rem 0.3rem;margin-bottom:0.25rem">
+        <div class="list-item-sub" style="display:flex;align-items:center;gap:0.3rem">
+          <input class="mat-qty" data-mat-id="${m.id}" type="number" min="0" step="any" value="${m.roughQuantity}" style="width:4rem;padding:0.15rem 0.3rem">
+          ×
+          <input class="mat-cost" data-mat-id="${m.id}" type="number" min="0" step="any" value="${m.roughUnitCost}" style="width:5rem;padding:0.15rem 0.3rem">
+          = ${money(total)}
+        </div>
+        <select class="mat-status" data-mat-id="${m.id}" style="margin-top:0.3rem;font-size:0.76rem;padding:0.2rem 0.4rem">
+          ${Object.entries(MSTATUS_LABEL).map(([k,v])=>`<option value="${k}" ${m.status===k?'selected':''}>${v}</option>`).join("")}
+        </select>
+      </div>
+      <button class="icon-btn" data-delete-material="${m.id}">✕</button>
+    </div>`;
+  }
+  function lineItemRowHTML(l){
+    return `<div class="list-item">
+      ${l.receiptAssetId?`<img class="receipt-thumb" src="/_blob/${l.receiptAssetId}" alt="receipt">`:""}
+      <div class="list-item-main">
+        <input class="line-desc" data-line-id="${l.id}" value="${esc(l.description)}" style="font-weight:600;padding:0.1rem 0.3rem;margin-bottom:0.2rem">
+        <div class="list-item-sub" style="display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap">
+          $<input class="line-cost" data-line-id="${l.id}" type="number" min="0" step="any" value="${l.cost}" style="width:4.2rem;padding:0.1rem 0.3rem">
+          <input class="line-vendor" data-line-id="${l.id}" value="${esc(l.vendor||'')}" placeholder="Vendor" style="width:6rem;padding:0.1rem 0.3rem">
+          <input class="line-date" data-line-id="${l.id}" type="date" value="${esc(l.date||'')}" style="padding:0.1rem 0.3rem">
+        </div>
+      </div>
+      <button class="icon-btn" data-delete-line="${l.id}">✕</button>
+    </div>`;
+  }
+  function checklistRowHTML(c){
+    return `<div class="checklist-item ${c.done?'done':''}">
+      <input type="checkbox" data-toggle-ck="${c.id}" ${c.done?'checked':''}>
+      <input class="ck-edit-text cl-text" data-ck-id="${c.id}" value="${esc(c.description)}" style="flex:1;font-size:0.85rem;border:none;background:transparent;padding:0.15rem 0.3rem">
+      <button class="icon-btn" data-delete-ck="${c.id}">✕</button>
+    </div>`;
+  }
+
+  function boardImageHTML(img){
+    const src = img.assetId ? ("/_blob/"+img.assetId) : (img.sourceUrl||"");
+    return `<div class="board-item">
+      <img src="${esc(src)}" class="board-thumb" alt="" loading="lazy">
+      <input class="board-note" data-board-id="${img.id}" value="${esc(img.notes||'')}" placeholder="Note…">
+      <button class="icon-btn board-del" data-delete-board="${img.id}">✕</button>
+    </div>`;
+  }
+  function swatchHTML(s){
+    return `<div class="swatch-item">
+      <input type="color" class="sw-color" data-sw-id="${s.id}" value="${esc(s.hex||'#9D8B5E')}">
+      <input class="sw-label" data-sw-id="${s.id}" value="${esc(s.label||'')}" placeholder="Label">
+      <button class="icon-btn" data-delete-swatch="${s.id}">✕</button>
+    </div>`;
+  }
+
+  function toastHTML(){
+    if (!ui.toast) return "";
+    return `<div class="toast">${esc(ui.toast)}</div>`;
+  }
+
+  // ---------- event wiring ----------
+  function wireEvents(){
+    const app = document.getElementById("app");
+
+    app.querySelectorAll("[data-tab]").forEach(b=> b.onclick = ()=>{ ui.tab=b.dataset.tab; ui.openDetail=null; render(); });
+
+    const backBtn = app.querySelector("#backToListBtn");
+    if (backBtn) backBtn.onclick = ()=>{ ui.openDetail=null; render(); };
+
+    app.querySelectorAll("[data-toggle-house]").forEach(el=> el.onclick = (e)=>{
+      const id = el.dataset.toggleHouse;
+      if (ui.expandedHouses.has(id)) ui.expandedHouses.delete(id); else ui.expandedHouses.add(id);
+      render();
+    });
+
+    app.querySelectorAll(".house-name-input, .house-address-input").forEach(el=>{
+      el.onclick = (e)=> e.stopPropagation();
+      el.onfocus = (e)=> e.stopPropagation();
+    });
+    app.querySelectorAll(".house-name-input").forEach(el=> el.onblur = ()=>{ if(el.value.trim()) updateHouse(el.dataset.houseId, {name: el.value.trim()}); });
+    app.querySelectorAll(".house-address-input").forEach(el=> el.onblur = ()=> updateHouse(el.dataset.houseId, {address: el.value}));
+    app.querySelectorAll(".room-name-input").forEach(el=> el.onblur = ()=>{ if(el.value.trim()) updateRoom(el.dataset.roomId, {name: el.value.trim()}); });
+
+    app.querySelectorAll("[data-open-detail]").forEach(el=> el.onclick = (e)=>{ e.stopPropagation(); ui.openDetail = el.dataset.openDetail; render(); });
+
+    const closeEls = app.querySelectorAll("[data-close-modal]");
+    closeEls.forEach(el=> el.onclick = (e)=>{
+      if (e.target !== el) return; // only backdrop or explicit close
+      ui.openDetail=null; ui.quickAddOpen=false; ui.addHouseOpen=false; ui.addRoomFor=null; ui.addDetailFor=null;
+      render();
+    });
+    app.querySelectorAll("[data-stop]").forEach(el=> el.onclick = (e)=> e.stopPropagation());
+
+    // add house
+    const openAddHouse = app.querySelector("[data-open-add-house]");
+    if (openAddHouse) openAddHouse.onclick = ()=>{ ui.addHouseOpen=true; render(); };
+    const submitAddHouse = app.querySelector("#submitAddHouse");
+    if (submitAddHouse) submitAddHouse.onclick = async ()=>{
+      const name = document.getElementById("newHouseName").value;
+      const addr = document.getElementById("newHouseAddress").value;
+      if(!name.trim()) return;
+      await addHouse(name, addr);
+      ui.addHouseOpen=false; render();
+    };
+
+    // add room
+    app.querySelectorAll("[data-open-add-room]").forEach(el=> el.onclick = ()=>{ ui.addRoomFor = el.dataset.openAddRoom; render(); });
+    const submitAddRoom = app.querySelector("#submitAddRoom");
+    if (submitAddRoom) submitAddRoom.onclick = async ()=>{
+      const houseId = submitAddRoom.dataset.house;
+      const name = document.getElementById("newRoomName").value;
+      if(!name.trim()) return;
+      await addRoom(houseId, name);
+      ui.addRoomFor=null; render();
+    };
+
+    // add detail
+    app.querySelectorAll("[data-open-add-detail]").forEach(el=> el.onclick = ()=>{ ui.addDetailFor = el.dataset.openAddDetail; render(); });
+    const submitAddDetail = app.querySelector("#submitAddDetail");
+    if (submitAddDetail) submitAddDetail.onclick = async ()=>{
+      const houseId = submitAddDetail.dataset.house, roomId = submitAddDetail.dataset.room;
+      const name = document.getElementById("newDetailName").value;
+      if(!name.trim()) return;
+      await addDetail(houseId, roomId, name);
+      ui.addDetailFor=null; render();
+    };
+
+    // delete room / house
+    app.querySelectorAll("[data-delete-room]").forEach(el=> el.onclick = (e)=>{ e.stopPropagation(); deleteRoom(el.dataset.deleteRoom); });
+    app.querySelectorAll("[data-delete-house]").forEach(el=> el.onclick = (e)=>{ e.stopPropagation(); deleteHouse(el.dataset.deleteHouse); });
+
+    // FAB + quick add
+    const fab = app.querySelector("#fabQuickAdd");
+    if (fab) fab.onclick = ()=>{ ui.quickAddOpen=true; render(); };
+    const fabSubmit = app.querySelector("#fabQuickSubmit");
+    if (fabSubmit) fabSubmit.onclick = async ()=>{
+      const text = document.getElementById("fabQuickText").value;
+      const fileInput = document.getElementById("fabQuickPhoto");
+      let assetId = null;
+      if (fileInput.files[0] && assetsCap){
+        try { const res = await assetsCap.upload(fileInput.files[0]); assetId = res.id; }
+        catch(e){ showToast("Photo upload failed."); }
+      }
+      await addInboxItem(text, assetId);
+      ui.quickAddOpen=false; render(); showToast("Added to inbox");
+    };
+
+    // inbox tab quick add
+    const quickAddSubmit = app.querySelector("#quickAddSubmit");
+    if (quickAddSubmit) quickAddSubmit.onclick = async ()=>{
+      const text = document.getElementById("quickAddText").value;
+      const fileInput = document.getElementById("quickAddPhoto");
+      let assetId = null;
+      if (fileInput.files[0] && assetsCap){
+        try { const res = await assetsCap.upload(fileInput.files[0]); assetId = res.id; }
+        catch(e){ showToast("Photo upload failed."); }
+      }
+      if(!text.trim() && !assetId) return;
+      await addInboxItem(text, assetId);
+      render(); showToast("Added to inbox");
+    };
+
+    // inbox items: filing
+    app.querySelectorAll("[data-toggle-filepicker]").forEach(el=> el.onclick = ()=>{
+      const id = el.dataset.toggleFilepicker;
+      ui.filingItem = ui.filingItem===id ? null : id;
+      render();
+    });
+    app.querySelectorAll("[data-discard-inbox]").forEach(el=> el.onclick = ()=> discardInboxItem(el.dataset.discardInbox));
+    app.querySelectorAll("[data-file-select]").forEach(el=> el.onchange = ()=>{
+      const id = el.dataset.fileSelect;
+      if (el.value) { fileInboxItem(id, el.value); ui.filingItem=null; }
+    });
+    app.querySelectorAll("[data-toggle-newdetail]").forEach(el=> el.onclick = ()=>{
+      const id = el.dataset.toggleNewdetail;
+      ui.newDetailUI[id] = ui.newDetailUI[id] || {};
+      ui.newDetailUI[id].open = !ui.newDetailUI[id].open;
+      render();
+    });
+    app.querySelectorAll("[data-nd-house]").forEach(el=> el.oninput = ()=>{ const id=el.dataset.ndHouse; ui.newDetailUI[id]=ui.newDetailUI[id]||{}; ui.newDetailUI[id].house=el.value; ui.newDetailUI[id].open=true; });
+    app.querySelectorAll("[data-nd-room]").forEach(el=> el.oninput = ()=>{ const id=el.dataset.ndRoom; ui.newDetailUI[id]=ui.newDetailUI[id]||{}; ui.newDetailUI[id].room=el.value; });
+    app.querySelectorAll("[data-nd-detail]").forEach(el=> el.oninput = ()=>{ const id=el.dataset.ndDetail; ui.newDetailUI[id]=ui.newDetailUI[id]||{}; ui.newDetailUI[id].detail=el.value; });
+    app.querySelectorAll("[data-file-new]").forEach(el=> el.onclick = async ()=>{
+      const id = el.dataset.fileNew;
+      const nd = ui.newDetailUI[id] || {};
+      if(!nd.house || !nd.house.trim() || !nd.detail || !nd.detail.trim()){ showToast("Need at least a house and a detail name."); return; }
+      let house = listOf(state.houses).find(h=>h.name.toLowerCase()===nd.house.trim().toLowerCase());
+      let houseId;
+      if (house) houseId = house.id;
+      else {
+        const ref = await safeAdd("houses", {name:nd.house.trim(), address:"", targetBudget:null, createdAt: nowISO()});
+        if (!ref) return;
+        houseId = ref.id;
+      }
+      let roomId = null;
+      if (nd.room && nd.room.trim()){
+        let room = listOf(state.rooms).find(r=>r.houseId===houseId && r.name.toLowerCase()===nd.room.trim().toLowerCase());
+        if (room) roomId = room.id;
+        else {
+          const ref = await safeAdd("rooms", {houseId, name:nd.room.trim(), createdAt: nowISO()});
+          if (!ref) return;
+          roomId = ref.id;
+        }
+      }
+      const detailRef = await safeAdd("details", {houseId, roomId, name:nd.detail.trim(), status:"not_started", timeframeGranularity:"", timeframeValue:"", createdAt: nowISO()});
+      if (!detailRef) return;
+      await fileInboxItem(id, detailRef.id);
+      ui.newDetailUI[id] = {};
+      ui.filingItem = null;
+      render();
+    });
+
+    // detail modal internals
+    const nameInput = app.querySelector("#detailNameInput");
+    if (nameInput){
+      nameInput.onblur = ()=>{ if(nameInput.value.trim() && ui.openDetail) updateDetail(ui.openDetail, {name: nameInput.value.trim()}); };
+      nameInput.onkeydown = (e)=>{ if(e.key==="Enter") nameInput.blur(); };
+    }
+    const scratchpadInput = app.querySelector("#scratchpadInput");
+    if (scratchpadInput){
+      let spTimer = null;
+      const saveIndicator = document.getElementById("scratchpadSaveState");
+      const doSave = ()=>{
+        if (!ui.openDetail) return;
+        if (saveIndicator) saveIndicator.textContent = "Saving…";
+        updateDetail(ui.openDetail, {scratchpad: scratchpadInput.value}).then(()=>{
+          if (saveIndicator) saveIndicator.textContent = "Saved";
+        });
+      };
+      scratchpadInput.oninput = ()=>{
+        const preview = document.getElementById("scratchpadPreview");
+        if (preview) preview.innerHTML = renderScratchpad(scratchpadInput.value);
+        if (saveIndicator) saveIndicator.textContent = "";
+        clearTimeout(spTimer);
+        spTimer = setTimeout(doSave, 1000);
+      };
+      scratchpadInput.onblur = ()=>{ clearTimeout(spTimer); doSave(); };
+    }
+
+    const suggestBtn = app.querySelector("#suggestMaterialsBtn");
+    if (suggestBtn) suggestBtn.onclick = ()=>{
+      const text = document.getElementById("scratchpadInput").value;
+      const vars = computeScratchpadVars(text);
+      const panel = document.getElementById("suggestPanel");
+      if (!vars.length){
+        panel.innerHTML = `<div class="empty-note">No computed values in the scratchpad yet — add some math above first.</div>`;
+        return;
+      }
+      panel.innerHTML = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.7rem;margin-top:0.5rem">
+        <div class="section-title" style="margin-bottom:0.5rem">Suggested materials — review and edit, then add</div>
+        ${vars.map((v,i)=>`
+          <div class="inline-add-form" style="align-items:center">
+            <input type="checkbox" class="sg-check" data-idx="${i}" style="width:auto;flex:0" ${/need/i.test(v.name)?'checked':''}>
+            <input class="sg-desc" data-idx="${i}" value="${esc(humanizeVarName(v.name))}" style="flex:2">
+            <input class="sg-qty" data-idx="${i}" type="number" step="any" value="${v.value}" style="max-width:5rem">
+            <input class="sg-cost" data-idx="${i}" type="number" step="any" placeholder="Unit $" style="max-width:6rem">
+          </div>`).join("")}
+        <div class="add-row-btns">
+          <button class="primary" id="addSuggestedBtn">Add checked to materials plan</button>
+          <button class="ghost" id="cancelSuggestBtn">Cancel</button>
+        </div>
+      </div>`;
+      document.getElementById("addSuggestedBtn").onclick = async ()=>{
+        const checks = panel.querySelectorAll(".sg-check");
+        let added = 0;
+        for (const chk of checks){
+          if (!chk.checked) continue;
+          const idx = chk.dataset.idx;
+          const desc = panel.querySelector(`.sg-desc[data-idx="${idx}"]`).value;
+          const qty = panel.querySelector(`.sg-qty[data-idx="${idx}"]`).value;
+          const cost = panel.querySelector(`.sg-cost[data-idx="${idx}"]`).value;
+          if (desc.trim()){ await addMaterial(ui.openDetail, desc, qty, cost); added++; }
+        }
+        panel.innerHTML = "";
+        if (added) showToast(added + " added to materials plan");
+      };
+      document.getElementById("cancelSuggestBtn").onclick = ()=>{ panel.innerHTML = ""; };
+    };
+
+    const estimatedSpendInput = app.querySelector("#estimatedSpendInput");
+    if (estimatedSpendInput) estimatedSpendInput.onblur = ()=>{
+      const v = estimatedSpendInput.value;
+      updateDetail(ui.openDetail, {estimatedSpend: v===""?null:Number(v)});
+    };
+
+    const statusSel = app.querySelector("#detailStatus");
+    if (statusSel) statusSel.onchange = ()=> updateDetail(ui.openDetail, {status: statusSel.value});
+    const granSel = app.querySelector("#detailGran");
+    if (granSel) granSel.onchange = ()=>{ updateDetail(ui.openDetail, {timeframeGranularity: granSel.value, timeframeValue: ""}); };
+    const tfVal = app.querySelector("#detailTFValue");
+    if (tfVal) tfVal.onchange = ()=> updateDetail(ui.openDetail, {timeframeValue: tfVal.value});
+
+    const moveHouse = app.querySelector("#moveHouse"), moveRoom = app.querySelector("#moveRoom");
+    if (moveHouse) moveHouse.onchange = async ()=>{ await updateDetail(ui.openDetail, {houseId: moveHouse.value, roomId: null}); render(); };
+    if (moveRoom) moveRoom.onchange = ()=> updateDetail(ui.openDetail, {roomId: moveRoom.value || null});
+
+    const addMaterialBtn = app.querySelector("#addMaterialBtn");
+    if (addMaterialBtn) addMaterialBtn.onclick = async ()=>{
+      const desc = document.getElementById("matDesc").value;
+      const qty = document.getElementById("matQty").value;
+      const cost = document.getElementById("matCost").value;
+      if(!desc.trim()) return;
+      await addMaterial(ui.openDetail, desc, qty, cost);
+    };
+    app.querySelectorAll(".mat-status").forEach(el=> el.onchange = ()=> updateMaterial(el.dataset.matId, {status: el.value}));
+    app.querySelectorAll(".mat-desc").forEach(el=> el.onblur = ()=> updateMaterial(el.dataset.matId, {description: el.value}));
+    function liveMatTotal(id){
+      const row = app.querySelector(`.mat-qty[data-mat-id="${id}"]`).closest(".list-item-main");
+      const q = Number(app.querySelector(`.mat-qty[data-mat-id="${id}"]`).value)||0;
+      const c = Number(app.querySelector(`.mat-cost[data-mat-id="${id}"]`).value)||0;
+      const sub = row.querySelector(".list-item-sub");
+      sub.lastChild.textContent = ` = ${money(q*c)}`;
+    }
+    app.querySelectorAll(".mat-qty").forEach(el=>{
+      el.oninput = ()=> liveMatTotal(el.dataset.matId);
+      el.onblur = ()=> updateMaterial(el.dataset.matId, {roughQuantity: Number(el.value)||0});
+    });
+    app.querySelectorAll(".mat-cost").forEach(el=>{
+      el.oninput = ()=> liveMatTotal(el.dataset.matId);
+      el.onblur = ()=> updateMaterial(el.dataset.matId, {roughUnitCost: Number(el.value)||0});
+    });
+    app.querySelectorAll("[data-delete-material]").forEach(el=> el.onclick = ()=> deleteMaterial(el.dataset.deleteMaterial));
+
+    const addLineBtn = app.querySelector("#addLineBtn");
+    if (addLineBtn) addLineBtn.onclick = async ()=>{
+      const desc = document.getElementById("lineDesc").value;
+      const cost = document.getElementById("lineCost").value;
+      const vendor = document.getElementById("lineVendor").value;
+      const date = document.getElementById("lineDate").value;
+      const fileInput = document.getElementById("lineReceipt");
+      if(!desc.trim()) return;
+      let assetId = null;
+      if (fileInput.files[0] && assetsCap){
+        try { const res = await assetsCap.upload(fileInput.files[0]); assetId = res.id; }
+        catch(e){ showToast("Receipt upload failed."); }
+      }
+      await addLineItem(ui.openDetail, desc, cost, vendor, date, assetId);
+    };
+    app.querySelectorAll("[data-delete-line]").forEach(el=> el.onclick = ()=> deleteLineItem(el.dataset.deleteLine));
+    app.querySelectorAll(".line-desc").forEach(el=> el.onblur = ()=>{ if(el.value.trim()) updateLineItem(el.dataset.lineId, {description: el.value.trim()}); });
+    app.querySelectorAll(".line-cost").forEach(el=> el.onblur = ()=> updateLineItem(el.dataset.lineId, {cost: Number(el.value)||0}));
+    app.querySelectorAll(".line-vendor").forEach(el=> el.onblur = ()=> updateLineItem(el.dataset.lineId, {vendor: el.value}));
+    app.querySelectorAll(".line-date").forEach(el=> el.onchange = ()=> updateLineItem(el.dataset.lineId, {date: el.value}));
+
+    const addCkBtn = app.querySelector("#addCkBtn");
+    if (addCkBtn) addCkBtn.onclick = async ()=>{
+      const text = document.getElementById("ckText").value;
+      if(!text.trim()) return;
+      await addChecklistItem(ui.openDetail, text);
+    };
+    app.querySelectorAll("[data-toggle-ck]").forEach(el=> el.onchange = ()=> toggleChecklist(el.dataset.toggleCk, el.checked));
+    app.querySelectorAll("[data-delete-ck]").forEach(el=> el.onclick = ()=> deleteChecklistItem(el.dataset.deleteCk));
+    app.querySelectorAll(".ck-edit-text").forEach(el=> el.onblur = ()=>{ if(el.value.trim()) updateChecklistItem(el.dataset.ckId, {description: el.value.trim()}); });
+
+    // ---- Phase 2: mood board / reference collection / palette ----
+    async function handleAddBoard(boardType, fileInputId, urlInputId){
+      const fileInput = document.getElementById(fileInputId);
+      const urlInput = document.getElementById(urlInputId);
+      let assetId = null, sourceUrl = null;
+      if (fileInput && fileInput.files[0] && assetsCap){
+        try { const res = await assetsCap.upload(fileInput.files[0]); assetId = res.id; }
+        catch(e){ showToast("Photo upload failed."); }
+      }
+      if (urlInput && urlInput.value.trim()) sourceUrl = urlInput.value.trim();
+      if (!assetId && !sourceUrl){ showToast("Add a photo or paste an image URL first."); return; }
+      await addBoardImage(ui.openDetail, boardType, assetId, sourceUrl, "");
+    }
+    const pinterestInput = app.querySelector("#pinterestBoardUrl");
+    if (pinterestInput) pinterestInput.onblur = ()=> updateDetail(ui.openDetail, {pinterestBoardUrl: pinterestInput.value.trim()});
+
+    const addMoodBtn = app.querySelector("#addMoodBtn");
+    if (addMoodBtn) addMoodBtn.onclick = ()=> handleAddBoard("mood", "moodFile", "moodUrl");
+    const addRefBtn = app.querySelector("#addRefBtn");
+    if (addRefBtn) addRefBtn.onclick = ()=> handleAddBoard("reference", "refFile", "refUrl");
+    app.querySelectorAll(".board-note").forEach(el=> el.onblur = ()=> updateBoardImage(el.dataset.boardId, {notes: el.value}));
+    app.querySelectorAll("[data-delete-board]").forEach(el=> el.onclick = ()=> deleteBoardImage(el.dataset.deleteBoard));
+
+    const addSwatchBtn = app.querySelector("#addSwatchBtn");
+    if (addSwatchBtn) addSwatchBtn.onclick = async ()=>{
+      const color = document.getElementById("newSwatchColor").value;
+      const label = document.getElementById("newSwatchLabel").value;
+      await addSwatch(ui.openDetail, color, label);
+    };
+    app.querySelectorAll(".sw-color").forEach(el=> el.onchange = ()=> updateSwatch(el.dataset.swId, {hex: el.value}));
+    app.querySelectorAll(".sw-label").forEach(el=> el.onblur = ()=> updateSwatch(el.dataset.swId, {label: el.value}));
+    app.querySelectorAll("[data-delete-swatch]").forEach(el=> el.onclick = ()=> deleteSwatch(el.dataset.deleteSwatch));
+
+    // ---- Phase 3: progress photos ----
+    app.querySelectorAll(".progress-file").forEach(el=> el.onchange = async ()=>{
+      if (!el.files[0] || !assetsCap) return;
+      try {
+        const res = await assetsCap.upload(el.files[0]);
+        await addProgressPhoto(ui.openDetail, el.dataset.phase, res.id, "");
+      } catch(e){ showToast("Photo upload failed."); }
+    });
+    app.querySelectorAll("[data-delete-progress]").forEach(el=> el.onclick = ()=> deleteProgressPhoto(el.dataset.deleteProgress));
+
+    // ---- Phase 4: receipts ----
+    const receiptUploadBtn = app.querySelector("#receiptUploadBtn");
+    if (receiptUploadBtn) receiptUploadBtn.onclick = async ()=>{
+      const fileInput = document.getElementById("receiptUpload");
+      if (!fileInput || !fileInput.files[0]){ showToast("Choose a photo first."); return; }
+      await uploadReceipt(fileInput.files[0]);
+      fileInput.value = "";
+      render();
+    };
+    app.querySelectorAll("[data-rescan]").forEach(el=> el.onclick = ()=> runOCR(el.dataset.rescan));
+    app.querySelectorAll("[data-toggle-manual-item]").forEach(el=> el.onclick = ()=>{
+      const id = el.dataset.toggleManualItem;
+      ui.manualItemOpen = ui.manualItemOpen===id ? null : id;
+      render();
+    });
+    app.querySelectorAll("[data-add-manual-submit]").forEach(el=> el.onclick = async ()=>{
+      const id = el.dataset.addManualSubmit;
+      const desc = document.getElementById("manualItemDesc-"+id).value;
+      const amount = document.getElementById("manualItemAmount-"+id).value;
+      if (!desc.trim()) return;
+      await addManualReceiptItem(id, desc, amount);
+      ui.manualItemOpen = null;
+      render();
+    });
+    app.querySelectorAll("[data-delete-receipt]").forEach(el=> el.onclick = ()=> deleteReceipt(el.dataset.deleteReceipt));
+    app.querySelectorAll("[data-assign-rli]").forEach(el=> el.onchange = ()=>{ if(el.value) assignReceiptLineItem(el.dataset.assignRli, el.value); });
+    app.querySelectorAll("[data-dismiss-rli]").forEach(el=> el.onclick = ()=> dismissReceiptLineItem(el.dataset.dismissRli));
+    app.querySelectorAll("[data-assign-here]").forEach(el=> el.onclick = ()=> assignReceiptLineItem(el.dataset.assignHere, ui.openDetail));
+
+    const deleteDetailBtn = app.querySelector("#deleteDetailBtn");
+    if (deleteDetailBtn) deleteDetailBtn.onclick = ()=> deleteDetail(ui.openDetail);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
