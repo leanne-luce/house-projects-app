@@ -2,8 +2,11 @@ import { getHousesTreeData } from "@/lib/queries";
 import { detailPath } from "@/lib/derived";
 import { fmtTimeframe, monthKeyFromWeek } from "@/lib/format";
 import Link from "next/link";
+import type { details as detailsTable } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
+
+type Detail = typeof detailsTable.$inferSelect;
 
 const GRAN_LABEL: Record<string, string> = {
   day: "Day",
@@ -20,24 +23,11 @@ const STATUS_LABEL: Record<string, string> = {
 };
 const ORDER = ["day", "week", "month", "quarter", "year", ""];
 // In progress work floats to the top of each group (it's what needs
-// attention right now); done sinks to the bottom (it's just a record at
-// this point).
+// attention right now); on_hold/not_started come after.
 const STATUS_SORT: Record<string, number> = { in_progress: 0, not_started: 1, on_hold: 1, done: 2 };
 
-export default async function HorizonPage() {
-  const { details, houses, rooms } = await getHousesTreeData();
-
-  if (!details.length) {
-    return (
-      <div className="empty-state">
-        <div className="big-emoji">🗓️</div>
-        Nothing scheduled yet — timeframes you set on a detail will show up here, grouped from soonest to
-        someday.
-      </div>
-    );
-  }
-
-  const buckets = new Map<string, { gran: string; value: string; items: typeof details }>();
+function groupByTimeframe(details: Detail[]) {
+  const buckets = new Map<string, { gran: string; value: string; items: Detail[] }>();
   for (const d of details) {
     let gran = d.timeframeGranularity || "";
     let value = gran ? d.timeframeValue || "" : "";
@@ -63,37 +53,84 @@ export default async function HorizonPage() {
     if (oi !== 0) return oi;
     return A.value.localeCompare(B.value);
   });
+  return keys.map((k) => {
+    const b = buckets.get(k)!;
+    const label = b.gran
+      ? fmtTimeframe(b.gran, b.value) || `${GRAN_LABEL[b.gran]}: ${b.value || "—"}`
+      : "Someday / unscheduled";
+    const items = [...b.items].sort((x, y) => {
+      const si = (STATUS_SORT[x.status || "not_started"] ?? 1) - (STATUS_SORT[y.status || "not_started"] ?? 1);
+      if (si !== 0) return si;
+      return x.name.localeCompare(y.name);
+    });
+    return { key: k, label, items };
+  });
+}
+
+function DetailRow({ detail, houses, rooms }: { detail: Detail; houses: Parameters<typeof detailPath>[0]; rooms: Parameters<typeof detailPath>[1] }) {
+  return (
+    <Link href={`/detail/${detail.id}`} className="horizon-item" style={{ textDecoration: "none", color: "inherit" }}>
+      <div>
+        <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>{detail.name}</div>
+        <div className="breadcrumb">{detailPath(houses, rooms, detail)}</div>
+      </div>
+      <span className={`status-pill status-${detail.status || "not_started"}`}>
+        {STATUS_LABEL[detail.status || "not_started"]}
+      </span>
+    </Link>
+  );
+}
+
+export default async function HorizonPage() {
+  const { details, houses, rooms } = await getHousesTreeData();
+
+  if (!details.length) {
+    return (
+      <div className="empty-state">
+        <div className="big-emoji">🗓️</div>
+        Nothing scheduled yet — timeframes you set on a detail will show up here, grouped from soonest to
+        someday.
+      </div>
+    );
+  }
+
+  // Done projects are a settled record, not something to act on — pulling
+  // them into one collapsed section (instead of leaving them scattered
+  // across every date group) keeps what's actually in progress above the
+  // fold.
+  const active = details.filter((d) => d.status !== "done");
+  const done = details.filter((d) => d.status === "done");
+  const activeGroups = groupByTimeframe(active);
+  const doneGroups = groupByTimeframe(done);
 
   return (
     <>
-      {keys.map((k) => {
-        const b = buckets.get(k)!;
-        const label = b.gran
-          ? fmtTimeframe(b.gran, b.value) || `${GRAN_LABEL[b.gran]}: ${b.value || "—"}`
-          : "Someday / unscheduled";
-        const items = [...b.items].sort((x, y) => {
-          const si =
-            (STATUS_SORT[x.status || "not_started"] ?? 1) - (STATUS_SORT[y.status || "not_started"] ?? 1);
-          if (si !== 0) return si;
-          return x.name.localeCompare(y.name);
-        });
-        return (
-          <div className="horizon-group" key={k}>
-            <h3>{label}</h3>
-            {items.map((d) => (
-              <Link href={`/detail/${d.id}`} key={d.id} className="horizon-item" style={{ textDecoration: "none", color: "inherit" }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>{d.name}</div>
-                  <div className="breadcrumb">{detailPath(houses, rooms, d)}</div>
-                </div>
-                <span className={`status-pill status-${d.status || "not_started"}`}>
-                  {STATUS_LABEL[d.status || "not_started"]}
-                </span>
-              </Link>
+      {activeGroups.length ? (
+        activeGroups.map((g) => (
+          <div className="horizon-group" key={g.key}>
+            <h3>{g.label}</h3>
+            {g.items.map((d) => (
+              <DetailRow key={d.id} detail={d} houses={houses} rooms={rooms} />
             ))}
           </div>
-        );
-      })}
+        ))
+      ) : (
+        <div className="empty-note">Nothing active — everything scheduled is done.</div>
+      )}
+
+      {done.length ? (
+        <details className="horizon-done">
+          <summary>✓ Done ({done.length})</summary>
+          {doneGroups.map((g) => (
+            <div className="horizon-group" key={g.key}>
+              <h3>{g.label}</h3>
+              {g.items.map((d) => (
+                <DetailRow key={d.id} detail={d} houses={houses} rooms={rooms} />
+              ))}
+            </div>
+          ))}
+        </details>
+      ) : null}
     </>
   );
 }

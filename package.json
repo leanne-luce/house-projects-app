@@ -16,8 +16,8 @@
   "dependencies": {
     "@vercel/blob": "^2.8.0",
     "drizzle-orm": "^0.45.2",
-    "heic2any": "^0.0.4",
     "jose": "^6.2.12",
+    "libheif-js": "^1.23.2",
     "next": "16.3.5",
     "pdfjs-dist": "^6.3.289",
     "postgres": "^3.4.9",

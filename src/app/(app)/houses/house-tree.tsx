@@ -190,6 +190,10 @@ export function HouseTree({
                     <span style={{ color: "var(--accent-strong)" }}>
                       All-in: {money(num(h.purchasePrice) + rollup.actual)}
                     </span>
+                    <br />
+                    <span style={{ color: "var(--text-muted)" }}>
+                      All-in if fully spent as planned: {money(num(h.purchasePrice) + rollup.rough)}
+                    </span>
                   </>
                 ) : null}
               </div>

@@ -284,6 +284,17 @@
   .horizon-group h3 { font-size:0.82rem; text-transform:uppercase; letter-spacing:0.03em; color:var(--text-faint); margin:0 0 0.5rem; }
   .horizon-item { display:flex; justify-content:space-between; align-items:center; padding:0.55rem 0.7rem; background:var(--surface-2); border-radius:var(--radius-sm); margin-bottom:0.4rem; cursor:pointer; }
   .horizon-item:hover { background:var(--accent-soft); }
+  /* Collapsed-by-default "Done" section — a plain <details>/<summary> needs
+     no client component just to remember open/closed. */
+  .horizon-done { margin-top:1.4rem; padding-top:1rem; border-top:1px solid var(--border); }
+  .horizon-done summary {
+    cursor:pointer; list-style:none; font-size:0.82rem; font-weight:700; color:var(--text-muted);
+    display:flex; align-items:center; gap:0.4rem; padding:0.3rem 0;
+  }
+  .horizon-done summary::-webkit-details-marker { display:none; }
+  .horizon-done summary::before { content:"▸"; color:var(--text-faint); transition:transform .15s; font-size:0.78rem; }
+  .horizon-done[open] summary::before { transform:rotate(90deg); }
+  .horizon-done .horizon-group { margin-top:0.9rem; }
   .breadcrumb { font-size:0.75rem; color:var(--text-muted); }
 
   /* FAB */
