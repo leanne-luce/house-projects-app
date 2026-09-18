@@ -11,6 +11,9 @@ import {
   lineItems,
   checklistItems,
   inboxItems,
+  boardImages,
+  paletteSwatches,
+  progressPhotos,
 } from "@/db/schema";
 import { asc } from "drizzle-orm";
 
@@ -41,6 +44,9 @@ export async function getDetailPageData(detailId: string) {
     lines,
     checklist,
     filedInbox,
+    allBoardImages,
+    allSwatches,
+    allProgressPhotos,
   ] = await Promise.all([
     db.select().from(houses),
     db.select().from(rooms),
@@ -50,6 +56,9 @@ export async function getDetailPageData(detailId: string) {
     db.select().from(lineItems),
     db.select().from(checklistItems),
     db.select().from(inboxItems),
+    db.select().from(boardImages).orderBy(asc(boardImages.createdAt)),
+    db.select().from(paletteSwatches).orderBy(asc(paletteSwatches.createdAt)),
+    db.select().from(progressPhotos).orderBy(asc(progressPhotos.createdAt)),
   ]);
   const detail = detailRows.find((d) => d.id === detailId) || null;
   return {
@@ -62,6 +71,9 @@ export async function getDetailPageData(detailId: string) {
     checklistItems: checklist.filter((c) => c.detailId === detailId),
     filedInbox: filedInbox.filter((i) => i.filedTo === detailId),
     allDetails: detailRows,
+    boardImages: allBoardImages.filter((b) => b.detailId === detailId),
+    paletteSwatches: allSwatches.filter((s) => s.detailId === detailId),
+    progressPhotos: allProgressPhotos.filter((p) => p.detailId === detailId),
   };
 }
 

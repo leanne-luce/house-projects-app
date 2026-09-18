@@ -18,9 +18,14 @@ import {
   materialItems,
   lineItems,
   inboxItems,
+  assets,
+  boardImages,
+  paletteSwatches,
+  progressPhotos,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { saveAsset } from "./storage";
 
 function revalidateEverything() {
   // Personal-scale app, cheap to over-invalidate rather than track exactly
@@ -37,8 +42,12 @@ function revalidateEverything() {
 
 export async function addHouse(name: string, address: string) {
   if (!name.trim()) return;
-  await db.insert(houses).values({ name: name.trim(), address: address.trim() || null });
+  const [row] = await db
+    .insert(houses)
+    .values({ name: name.trim(), address: address.trim() || null })
+    .returning();
   revalidateEverything();
+  return row;
 }
 
 export async function updateHouse(id: string, patch: Partial<{ name: string; address: string | null }>) {
@@ -209,9 +218,24 @@ export async function deleteLineItem(id: string) {
 
 // ---------- Inbox ----------
 
-export async function addInboxItem(text: string) {
-  if (!text.trim()) return;
-  await db.insert(inboxItems).values({ type: "note", text: text.trim(), source: "manual" });
+export async function addInboxItem(formData: FormData) {
+  const text = String(formData.get("text") || "").trim();
+  const file = formData.get("file") as File | null;
+
+  let assetId: string | null = null;
+  if (file && file.size > 0) {
+    const saved = await saveAsset(file);
+    const [row] = await db.insert(assets).values(saved).returning();
+    assetId = row.id;
+  }
+  if (!text && !assetId) return;
+
+  await db.insert(inboxItems).values({
+    type: assetId ? "image" : "note",
+    text,
+    assetId,
+    source: "manual",
+  });
   revalidateEverything();
 }
 
@@ -266,5 +290,79 @@ export async function fileInboxItemToNew(
 
     await tx.update(inboxItems).set({ filedTo: detail.id }).where(eq(inboxItems.id, inboxItemId));
   });
+  revalidateEverything();
+}
+
+
+// ---------- Mood board / Reference collection (Phase 3) ----------
+// Mood board and Reference collection share this same image-collection
+// mechanic (upload or paste an image URL) but are kept as separate
+// collections (boardType) since they answer different questions — "what
+// should this look like" vs. "how does this go together" — per the
+// brief's own reasoning (section 7).
+
+export async function addBoardImage(formData: FormData) {
+  const detailId = String(formData.get("detailId") || "");
+  const boardType = String(formData.get("boardType") || "");
+  const sourceUrl = String(formData.get("sourceUrl") || "").trim();
+  const notes = String(formData.get("notes") || "").trim();
+  const file = formData.get("file") as File | null;
+
+  let assetId: string | null = null;
+  if (file && file.size > 0) {
+    const saved = await saveAsset(file);
+    const [row] = await db.insert(assets).values(saved).returning();
+    assetId = row.id;
+  }
+  if (!assetId && !sourceUrl) return;
+
+  await db.insert(boardImages).values({ detailId, boardType, assetId, sourceUrl: sourceUrl || null, notes });
+  revalidateEverything();
+}
+
+export async function updateBoardImageNotes(id: string, notes: string) {
+  await db.update(boardImages).set({ notes }).where(eq(boardImages.id, id));
+  revalidateEverything();
+}
+
+export async function deleteBoardImage(id: string) {
+  await db.delete(boardImages).where(eq(boardImages.id, id));
+  revalidateEverything();
+}
+
+// ---------- Color palette (Phase 3) ----------
+
+export async function addSwatch(detailId: string, hex: string, label: string) {
+  await db.insert(paletteSwatches).values({ detailId, hex: hex || "#9D8B5E", label: label.trim() });
+  revalidateEverything();
+}
+
+export async function updateSwatch(id: string, patch: Partial<{ hex: string; label: string }>) {
+  await db.update(paletteSwatches).set(patch).where(eq(paletteSwatches.id, id));
+  revalidateEverything();
+}
+
+export async function deleteSwatch(id: string) {
+  await db.delete(paletteSwatches).where(eq(paletteSwatches.id, id));
+  revalidateEverything();
+}
+
+// ---------- Progress photos (Phase 3) ----------
+
+export async function addProgressPhoto(formData: FormData) {
+  const detailId = String(formData.get("detailId") || "");
+  const phase = String(formData.get("phase") || "");
+  const notes = String(formData.get("notes") || "").trim();
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return;
+
+  const saved = await saveAsset(file);
+  const [assetRow] = await db.insert(assets).values(saved).returning();
+  await db.insert(progressPhotos).values({ detailId, phase, assetId: assetRow.id, notes });
+  revalidateEverything();
+}
+
+export async function deleteProgressPhoto(id: string) {
+  await db.delete(progressPhotos).where(eq(progressPhotos.id, id));
   revalidateEverything();
 }

@@ -42,3 +42,6 @@ next-env.d.ts
 
 # local Claude Code settings (not part of the app)
 .claude/
+
+# local dev file uploads (storage abstraction fallback, see src/lib/storage.ts)
+.uploads/

@@ -83,7 +83,12 @@ export function HouseTree({
             + Add house
           </button>
         </div>
-        {modal ? <AddModal modal={modal} onClose={() => setModal(null)} houses={houses} /> : null}
+        {modal ? <AddModal
+            modal={modal}
+            onClose={() => setModal(null)}
+            houses={houses}
+            onHouseAdded={(h) => setExpanded((prev) => new Set(prev).add(h.id))}
+          /> : null}
       </>
     );
   }
@@ -250,7 +255,12 @@ export function HouseTree({
         </button>
       </div>
 
-      {modal ? <AddModal modal={modal} onClose={() => setModal(null)} houses={houses} /> : null}
+      {modal ? <AddModal
+            modal={modal}
+            onClose={() => setModal(null)}
+            houses={houses}
+            onHouseAdded={(h) => setExpanded((prev) => new Set(prev).add(h.id))}
+          /> : null}
     </>
   );
 }
@@ -293,7 +303,17 @@ function DetailRow({
   );
 }
 
-function AddModal({ modal, onClose, houses }: { modal: NonNullable<ModalState>; onClose: () => void; houses: House[] }) {
+function AddModal({
+  modal,
+  onClose,
+  houses,
+  onHouseAdded,
+}: {
+  modal: NonNullable<ModalState>;
+  onClose: () => void;
+  houses: House[];
+  onHouseAdded: (house: House) => void;
+}) {
   const [pending, startTransition] = useTransition();
 
   if (modal.type === "add-house") {
@@ -306,7 +326,8 @@ function AddModal({ modal, onClose, houses }: { modal: NonNullable<ModalState>; 
             const name = (form.elements.namedItem("name") as HTMLInputElement).value;
             const address = (form.elements.namedItem("address") as HTMLInputElement).value;
             startTransition(async () => {
-              await addHouse(name, address);
+              const house = await addHouse(name, address);
+              if (house) onHouseAdded(house);
               onClose();
             });
           }}

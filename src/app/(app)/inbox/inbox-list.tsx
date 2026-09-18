@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { fmtDate } from "@/lib/format";
 import { detailPath } from "@/lib/derived";
 import { addInboxItem, fileInboxItem, discardInboxItem, fileInboxItemToNew } from "@/lib/actions";
+import { compressImage } from "@/lib/compress-image";
 import type { details as detailsTable, houses as housesTable, inboxItems as inboxItemsTable, rooms as roomsTable } from "@/db/schema";
 
 type House = typeof housesTable.$inferSelect;
@@ -25,6 +26,7 @@ export function InboxList({
 }) {
   const [pending, startTransition] = useTransition();
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const sortedDetails = [...details].sort((a, b) =>
     detailPath(houses, rooms, a).localeCompare(detailPath(houses, rooms, b))
@@ -40,23 +42,26 @@ export function InboxList({
           <textarea ref={textRef} rows={2} placeholder="A stray thought, a material, a link…" />
         </div>
         <div className="inline-add-form">
+          <input type="file" accept="image/*" ref={fileRef} style={{ flex: 1 }} disabled={pending} />
           <button
             className="primary"
             disabled={pending}
             onClick={() => {
-              const val = textRef.current?.value || "";
-              if (!val.trim()) return;
+              const text = textRef.current?.value || "";
+              const file = fileRef.current?.files?.[0] || null;
+              if (!text.trim() && !file) return;
               startTransition(async () => {
-                await addInboxItem(val);
+                const formData = new FormData();
+                formData.set("text", text);
+                if (file) formData.set("file", await compressImage(file));
+                await addInboxItem(formData);
                 if (textRef.current) textRef.current.value = "";
+                if (fileRef.current) fileRef.current.value = "";
               });
             }}
           >
             {pending ? "Adding…" : "Add to inbox"}
           </button>
-        </div>
-        <div className="scratchpad-help" style={{ marginTop: "0.4rem" }}>
-          Photo capture arrives once file storage is wired up — text works fully now.
         </div>
       </div>
 
@@ -108,15 +113,19 @@ function InboxRow({
 
   return (
     <div className="inbox-item" style={isLast ? {} : { borderBottom: "1px solid var(--border)" }}>
-      <div
-        className="inbox-photo"
-        style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-2)", borderRadius: 8 }}
-      >
-        📝
-      </div>
+      {item.assetId ? (
+        <img className="inbox-photo" src={`/asset/${item.assetId}`} alt="" />
+      ) : (
+        <div
+          className="inbox-photo"
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-2)", borderRadius: 8 }}
+        >
+          📝
+        </div>
+      )}
       <div className="inbox-item-body">
         <div className="inbox-item-text">
-          {item.text || <i style={{ color: "var(--text-faint)" }}>(no text)</i>}
+          {item.text || <i style={{ color: "var(--text-faint)" }}>(photo only)</i>}
         </div>
         <div className="inbox-item-time">{fmtDate(item.createdAt)}</div>
         <div className="inbox-actions">

@@ -18,6 +18,9 @@ import {
   updateChecklistItem,
   deleteChecklistItem,
 } from "@/lib/actions";
+import { BoardPanel } from "./board-panel";
+import { PalettePanel } from "./palette-panel";
+import { ProgressPhotosPanel } from "./progress-photos-panel";
 import type {
   details as detailsTable,
   houses as housesTable,
@@ -26,6 +29,9 @@ import type {
   lineItems as lineItemsTable,
   checklistItems as checklistItemsTable,
   inboxItems as inboxItemsTable,
+  boardImages as boardImagesTable,
+  paletteSwatches as paletteSwatchesTable,
+  progressPhotos as progressPhotosTable,
 } from "@/db/schema";
 
 type Detail = typeof detailsTable.$inferSelect;
@@ -35,6 +41,9 @@ type MaterialItem = typeof materialItemsTable.$inferSelect;
 type LineItem = typeof lineItemsTable.$inferSelect;
 type ChecklistItem = typeof checklistItemsTable.$inferSelect;
 type InboxItem = typeof inboxItemsTable.$inferSelect;
+type BoardImage = typeof boardImagesTable.$inferSelect;
+type Swatch = typeof paletteSwatchesTable.$inferSelect;
+type ProgressPhoto = typeof progressPhotosTable.$inferSelect;
 
 const STATUS_LABEL: Record<string, string> = {
   not_started: "Not started",
@@ -98,6 +107,9 @@ export function DetailPageClient({
   lineItems,
   checklistItems,
   filedInbox,
+  boardImages,
+  paletteSwatches,
+  progressPhotos,
 }: {
   detail: Detail;
   houses: House[];
@@ -106,6 +118,9 @@ export function DetailPageClient({
   lineItems: LineItem[];
   checklistItems: ChecklistItem[];
   filedInbox: InboxItem[];
+  boardImages: BoardImage[];
+  paletteSwatches: Swatch[];
+  progressPhotos: ProgressPhoto[];
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -237,12 +252,36 @@ export function DetailPageClient({
         <SpendPanel detailId={detail.id} lines={lineItems} />
         <ChecklistPanel detailId={detail.id} items={checklistItems} />
 
+        <BoardPanel
+          detailId={detail.id}
+          boardType="mood"
+          title="🎨 Mood board"
+          images={boardImages.filter((b) => b.boardType === "mood")}
+          emptyNote="No images yet — pull in whatever's shaping the vision for this."
+          pinterestBoardUrl={detail.pinterestBoardUrl}
+        />
+
+        <PalettePanel detailId={detail.id} swatches={paletteSwatches} />
+
+        <BoardPanel
+          detailId={detail.id}
+          boardType="reference"
+          title="🔧 Reference & assembly"
+          images={boardImages.filter((b) => b.boardType === "reference")}
+          emptyNote={'No "how it\'s built" references yet.'}
+        />
+
+        <ProgressPhotosPanel detailId={detail.id} photos={progressPhotos} />
+
         {filedInbox.length ? (
           <div className="panel-card">
             <h4>📥 Captured here</h4>
             {filedInbox.map((it) => (
               <div className="list-item" key={it.id}>
-                <div className="list-item-main">{it.text}</div>
+                <div className="list-item-main">
+                  {it.assetId ? <img className="receipt-thumb" src={`/asset/${it.assetId}`} alt="" /> : null}{" "}
+                  {it.text}
+                </div>
               </div>
             ))}
           </div>

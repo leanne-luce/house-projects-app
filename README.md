@@ -31,9 +31,8 @@ database. That's the part that alone replaces the spreadsheet:
 - Houses/Rooms/Details tree — add/edit/move/delete at every level, with
   rollup badges (detail count, spend) and cascading deletes that move
   details up rather than destroying them where the prototype did the same.
-- Quick capture + Inbox — text capture, filing to an existing Detail or to a
-  brand-new House/Room/Detail created on the spot. (Photo capture arrives
-  with Phase 3's Vercel Blob wiring.)
+- Quick capture + Inbox — text and/or photo, filing to an existing Detail or
+  to a brand-new House/Room/Detail created on the spot.
 - Horizon view, grouped and sorted by timeframe.
 - Detail page — editable name/status/timeframe, Estimated-vs-Actual budget
   bars (with the color flip on overspend), Materials plan, Actual spend log,
@@ -45,7 +44,14 @@ driver — this works identically against local Postgres (used for all
 development/testing so far) and Neon's regular pooled connection string in
 production, at no cost to how this deploys. See the comment in that file.
 
-Phase 3 (mood board, palette, progress photos, real image storage) is next.
+Phase 3 (mood board, palette, progress photos, real image storage) is also
+done. File storage uses a small abstraction (`src/lib/storage.ts`): Vercel
+Blob when `BLOB_READ_WRITE_TOKEN` is set, otherwise local disk plus a route
+handler, so image upload flows are testable locally without a Vercel project
+yet. Uploaded images are compressed client-side (resize to ~1600px, JPEG
+~78% quality) before they leave the browser, per the free-tier cost model.
+
+Phase 4 (receipts + server-side OCR) is next.
 
 ## Scripts
 
