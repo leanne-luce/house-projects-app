@@ -116,6 +116,7 @@ export function DetailPageClient({
   progressPhotos,
   pendingReceiptItems,
   receiptDates,
+  contentTypeByAssetId,
 }: {
   detail: Detail;
   houses: House[];
@@ -129,6 +130,7 @@ export function DetailPageClient({
   progressPhotos: ProgressPhoto[];
   pendingReceiptItems: ReceiptLineItem[];
   receiptDates: Record<string, string | null>;
+  contentTypeByAssetId: Record<string, string | null>;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -270,7 +272,7 @@ export function DetailPageClient({
 
         <PalettePanel detailId={detail.id} swatches={paletteSwatches} />
 
-        <ProgressPhotosPanel detailId={detail.id} photos={progressPhotos} />
+        <ProgressPhotosPanel detailId={detail.id} photos={progressPhotos} contentTypeByAssetId={contentTypeByAssetId} />
 
         <UnassignedReceiptItemsPanel detailId={detail.id} items={pendingReceiptItems} receiptDates={receiptDates} />
 

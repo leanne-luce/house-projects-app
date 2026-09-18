@@ -23,6 +23,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       progressPhotos={data.progressPhotos}
       pendingReceiptItems={data.pendingReceiptItems}
       receiptDates={data.receiptDates}
+      contentTypeByAssetId={data.contentTypeByAssetId}
     />
   );
 }

@@ -111,6 +111,26 @@ skip-word list was extended to exclude payment-processing lines. Verified
 by reconstructing the real receipt's exact structure as a test PDF (not
 guessed at) before and after the fix.
 
+Two more additions:
+
+- A receipt's vendor now backfills onto any spend entries already created
+  from it, not just future ones — set the vendor after assigning some
+  items (or edit it later) and everything created from that receipt
+  updates to match.
+- Progress photos accept multiple files at once, and video alongside
+  photos (a phone clip of a job in progress, not just a still). Along the
+  way, found and fixed a real latent bug: Next.js caps a Server Action's
+  request body at 1MB by default, which almost certainly meant real,
+  uncompressed phone-camera receipt photos were already silently failing
+  above that size before this was raised (`experimental.serverActions.bodySizeLimit`
+  in `next.config.ts`) — confirmed by successfully uploading a 5.4MB test
+  photo afterward. Video isn't compressed (no simple free way to do that
+  client-side); this hasn't been verified against a real Vercel deployment,
+  where the platform itself may impose its own separate request-size
+  ceiling regardless of this setting — if large uploads fail once deployed,
+  a client-side direct-to-Blob upload is the fix, bypassing the function
+  entirely for the actual bytes.
+
 Phase 5 (Overview dashboard) is next.
 
 ## Scripts

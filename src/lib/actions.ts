@@ -561,7 +561,20 @@ export async function addManualReceiptItem(receiptId: string, description: strin
 }
 
 export async function updateReceiptVendor(id: string, vendor: string) {
-  await db.update(receipts).set({ vendor: vendor.trim() || null }).where(eq(receipts.id, id));
+  const trimmed = vendor.trim() || null;
+  const [receipt] = await db.select().from(receipts).where(eq(receipts.id, id)).limit(1);
+  if (!receipt) return;
+
+  await db.update(receipts).set({ vendor: trimmed }).where(eq(receipts.id, id));
+
+  // Backfill: any LineItem already created by assigning one of this
+  // receipt's items (before the vendor was set, or if it's edited later)
+  // should reflect the vendor too, not just assignments made from now on.
+  // receiptAssetId is unique per receipt (each receipt gets its own
+  // uploaded asset), so every LineItem carrying it necessarily came from
+  // assigning an item off THIS receipt.
+  await db.update(lineItems).set({ vendor: trimmed || "" }).where(eq(lineItems.receiptAssetId, receipt.assetId));
+
   revalidateEverything();
 }
 

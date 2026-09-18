@@ -13,9 +13,11 @@ const PHASES = ["before", "during", "after"] as const;
 export function ProgressPhotosPanel({
   detailId,
   photos,
+  contentTypeByAssetId,
 }: {
   detailId: string;
   photos: ProgressPhoto[];
+  contentTypeByAssetId: Record<string, string | null>;
 }) {
   const [, startTransition] = useTransition();
 
@@ -29,6 +31,7 @@ export function ProgressPhotosPanel({
             phase={phase}
             detailId={detailId}
             photos={photos.filter((p) => p.phase === phase)}
+            contentTypeByAssetId={contentTypeByAssetId}
             onDelete={(id) => startTransition(() => deleteProgressPhoto(id))}
           />
         ))}
@@ -41,45 +44,68 @@ function PhaseColumn({
   phase,
   detailId,
   photos,
+  contentTypeByAssetId,
   onDelete,
 }: {
   phase: string;
   detailId: string;
   photos: ProgressPhoto[];
+  contentTypeByAssetId: Record<string, string | null>;
   onDelete: (id: string) => void;
 }) {
-  const [uploading, setUploading] = useState(false);
+  // Tracks how many uploads from this column's batch are still in flight,
+  // rather than a single boolean — several files get uploaded one after
+  // another (not in parallel, so ordering stays predictable and it's clear
+  // in the UI how many are left), and a plain "uploading?" boolean would
+  // otherwise flip back to false as soon as the first of several finishes.
+  const [remaining, setRemaining] = useState(0);
 
-  async function handleFile(file: File) {
-    setUploading(true);
-    const compressed = await compressImage(file);
-    const formData = new FormData();
-    formData.set("detailId", detailId);
-    formData.set("phase", phase);
-    formData.set("file", compressed);
-    await addProgressPhoto(formData);
-    setUploading(false);
+  async function handleFiles(files: File[]) {
+    setRemaining(files.length);
+    for (const file of files) {
+      // compressImage already leaves non-image files (video) untouched —
+      // no client-side video compression, that's a much harder problem
+      // with no simple free browser-side option; videos upload as-is.
+      const prepared = await compressImage(file);
+      const formData = new FormData();
+      formData.set("detailId", detailId);
+      formData.set("phase", phase);
+      formData.set("file", prepared);
+      await addProgressPhoto(formData);
+      setRemaining((n) => n - 1);
+    }
   }
+
+  const uploading = remaining > 0;
 
   return (
     <div className="progress-col">
       <div className="progress-col-title">{phase[0].toUpperCase() + phase.slice(1)}</div>
       {photos.length ? (
-        photos.map((p) => (
-          <div className="progress-photo-item" key={p.id}>
-            <img src={`/asset/${p.assetId}`} className="progress-thumb" alt="" />
-            <button className="icon-btn" onClick={() => onDelete(p.id)}>
-              ✕
-            </button>
-          </div>
-        ))
+        photos.map((p) => {
+          const isVideo = (contentTypeByAssetId[p.assetId] || "").startsWith("video/");
+          return (
+            <div className="progress-photo-item" key={p.id}>
+              {isVideo ? (
+                <video src={`/asset/${p.assetId}`} className="progress-thumb" controls playsInline />
+              ) : (
+                <img src={`/asset/${p.assetId}`} className="progress-thumb" alt="" />
+              )}
+              <button className="icon-btn" onClick={() => onDelete(p.id)}>
+                ✕
+              </button>
+            </div>
+          );
+        })
       ) : (
         <div className="empty-note">—</div>
       )}
       <PhotoPickerButton
-        onFileSelected={handleFile}
+        onFilesSelected={handleFiles}
         disabled={uploading}
-        label={uploading ? "Uploading…" : "+ Add photo"}
+        multiple
+        accept="image/*,video/*"
+        label={uploading ? `Uploading… (${remaining} left)` : "+ Add photos/video"}
         className="ghost"
         style={{ width: "100%", marginTop: "0.3rem", fontSize: "0.74rem", padding: "0.65rem 0.4rem", minHeight: "2.75rem" }}
       />

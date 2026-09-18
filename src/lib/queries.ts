@@ -52,6 +52,7 @@ export async function getDetailPageData(detailId: string) {
     allProgressPhotos,
     allReceiptLineItems,
     allReceipts,
+    allAssets,
   ] = await Promise.all([
     db.select().from(houses),
     db.select().from(rooms),
@@ -66,6 +67,7 @@ export async function getDetailPageData(detailId: string) {
     db.select().from(progressPhotos).orderBy(asc(progressPhotos.createdAt)),
     db.select().from(receiptLineItems),
     db.select().from(receipts),
+    db.select().from(assets),
   ]);
   const detail = detailRows.find((d) => d.id === detailId) || null;
   return {
@@ -85,6 +87,7 @@ export async function getDetailPageData(detailId: string) {
     receiptDates: Object.fromEntries(
       allReceipts.map((r) => [r.id, r.uploadedAt ? r.uploadedAt.toISOString() : null])
     ),
+    contentTypeByAssetId: Object.fromEntries(allAssets.map((a) => [a.id, a.contentType])),
   };
 }
 

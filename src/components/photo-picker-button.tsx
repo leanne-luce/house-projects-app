@@ -9,21 +9,30 @@ import { useRef } from "react";
 // whatever's installed and registered for images), exactly as a plain file
 // input would. The only thing this changes is that the previous default
 // tiny "Choose File" browser control is a proper button now.
+//
+// `multiple` + `onFilesSelected` is an opt-in alternative to the original
+// single-file `onFileSelected` — existing callers that only pass
+// `onFileSelected` are unaffected, since a plain (non-multiple) file input
+// only ever yields one file regardless.
 
 export function PhotoPickerButton({
   onFileSelected,
+  onFilesSelected,
   label = "+ Add photo",
   disabled,
   className = "secondary",
   style,
   accept = "image/*",
+  multiple = false,
 }: {
-  onFileSelected: (file: File) => void;
+  onFileSelected?: (file: File) => void;
+  onFilesSelected?: (files: File[]) => void;
   label?: string;
   disabled?: boolean;
   className?: string;
   style?: React.CSSProperties;
   accept?: string;
+  multiple?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -33,12 +42,16 @@ export function PhotoPickerButton({
         ref={inputRef}
         type="file"
         accept={accept}
+        multiple={multiple}
         disabled={disabled}
         style={{ display: "none" }}
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onFileSelected(file);
-          // Reset so selecting the exact same file again still fires onChange.
+          const files = e.target.files;
+          if (files && files.length) {
+            if (onFilesSelected) onFilesSelected(Array.from(files));
+            else if (onFileSelected) onFileSelected(files[0]);
+          }
+          // Reset so selecting the exact same file(s) again still fires onChange.
           e.target.value = "";
         }}
       />
