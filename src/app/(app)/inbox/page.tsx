@@ -1,8 +1,11 @@
-export default function InboxPage() {
+import { getInboxTabData } from "@/lib/queries";
+import { InboxList } from "./inbox-list";
+
+export const dynamic = "force-dynamic";
+
+export default async function InboxPage() {
+  const data = await getInboxTabData();
   return (
-    <div className="empty-state">
-      <div className="big-emoji">📥</div>
-      Quick capture + Inbox is coming in Phase 2.
-    </div>
+    <InboxList unfiled={data.unfiled} details={data.details} houses={data.houses} rooms={data.rooms} />
   );
 }

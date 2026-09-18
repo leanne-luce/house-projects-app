@@ -1,10 +1,17 @@
-export default function HousesPage() {
+import { getHousesTreeData } from "@/lib/queries";
+import { HouseTree } from "./house-tree";
+
+export const dynamic = "force-dynamic";
+
+export default async function HousesPage() {
+  const data = await getHousesTreeData();
   return (
-    <div className="empty-state">
-      <div className="big-emoji">🏡</div>
-      Houses/Rooms/Details tree is coming in Phase 2.
-      <br />
-      Foundation (auth, database, deploy) is wired up first.
-    </div>
+    <HouseTree
+      houses={data.houses}
+      rooms={data.rooms}
+      details={data.details}
+      materialItems={data.materialItems}
+      lineItems={data.lineItems}
+    />
   );
 }

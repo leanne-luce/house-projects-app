@@ -24,9 +24,28 @@ see the plan's "Cost model" section for exactly what was checked and why.
 
 ## Project status
 
-Phase 1 (Foundation) is done: schema, passphrase auth, deploy-ready shell with
-the prototype's design tokens carried over, and stub pages for every tab.
-Phase 2 (House/Room/Detail structure, Inbox, Materials/Spend) is next.
+Phase 1 (Foundation) and Phase 2 (House/Room/Detail structure, Inbox,
+Materials/Spend) are done and verified end-to-end against a real Postgres
+database. That's the part that alone replaces the spreadsheet:
+
+- Houses/Rooms/Details tree — add/edit/move/delete at every level, with
+  rollup badges (detail count, spend) and cascading deletes that move
+  details up rather than destroying them where the prototype did the same.
+- Quick capture + Inbox — text capture, filing to an existing Detail or to a
+  brand-new House/Room/Detail created on the spot. (Photo capture arrives
+  with Phase 3's Vercel Blob wiring.)
+- Horizon view, grouped and sorted by timeframe.
+- Detail page — editable name/status/timeframe, Estimated-vs-Actual budget
+  bars (with the color flip on overspend), Materials plan, Actual spend log,
+  Checklist with a progress bar, Move, and a Danger Zone delete.
+
+Deviation from the original driver plan: `src/db/index.ts` uses `postgres.js`
+against a standard Postgres connection string rather than Neon's HTTP-only
+driver — this works identically against local Postgres (used for all
+development/testing so far) and Neon's regular pooled connection string in
+production, at no cost to how this deploys. See the comment in that file.
+
+Phase 3 (mood board, palette, progress photos, real image storage) is next.
 
 ## Scripts
 

@@ -1,5 +1,7 @@
 import { defineConfig } from "drizzle-kit";
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
+
+loadEnv({ path: ".env.local" });
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is not set. Copy .env.example to .env.local first.");
