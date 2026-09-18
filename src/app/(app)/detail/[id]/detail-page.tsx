@@ -68,17 +68,26 @@ function timeframeValueInput(
   value: string,
   onChange: (v: string) => void
 ) {
+  // `key={gran}` forces a fresh DOM node whenever the granularity changes
+  // (date -> week -> month -> ...), rather than React trying to reconcile
+  // one <input> across type changes. Every branch is deliberately
+  // uncontrolled (defaultValue, not value) so switching branches never
+  // flips a single input between controlled and uncontrolled — that
+  // combination is what triggered React's "changing a controlled input to
+  // be uncontrolled" warning during testing.
+  // `key` must be passed directly on the JSX element, never through a
+  // spread object — React specifically warns/ignores it otherwise.
   const common = {
     id: "detailTFValue",
     defaultValue: value,
     onBlur: (e: React.FocusEvent<HTMLInputElement>) => onChange(e.target.value),
   };
-  if (gran === "day") return <input type="date" {...common} />;
-  if (gran === "week") return <input type="week" {...common} />;
-  if (gran === "month") return <input type="month" {...common} />;
-  if (gran === "quarter") return <input placeholder="e.g. 2026 Q4" {...common} />;
-  if (gran === "year") return <input type="number" placeholder="2027" {...common} />;
-  return <input disabled placeholder="—" value="" onChange={() => {}} />;
+  if (gran === "day") return <input key={gran} type="date" {...common} />;
+  if (gran === "week") return <input key={gran} type="week" {...common} />;
+  if (gran === "month") return <input key={gran} type="month" {...common} />;
+  if (gran === "quarter") return <input key={gran} placeholder="e.g. 2026 Q4" {...common} />;
+  if (gran === "year") return <input key={gran} type="number" placeholder="2027" {...common} />;
+  return <input key={gran} disabled placeholder="—" defaultValue="" />;
 }
 
 export function DetailPageClient({
