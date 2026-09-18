@@ -64,11 +64,14 @@ export function roomRollup(allDetails: Detail[], materials: MaterialItem[], line
   const ds = detailsForRoom(allDetails, roomId);
   let rough = 0;
   let actual = 0;
+  const counts: Record<string, number> = { not_started: 0, in_progress: 0, done: 0, on_hold: 0 };
   for (const d of ds) {
     rough += roughCost(materials, d.id);
     actual += actualCost(lines, d.id);
+    const key = d.status || "not_started";
+    counts[key] = (counts[key] || 0) + 1;
   }
-  return { count: ds.length, rough, actual };
+  return { count: ds.length, rough, actual, counts };
 }
 
 export function detailPath(allHouses: House[], allRooms: Room[], detail: Detail | null | undefined): string {

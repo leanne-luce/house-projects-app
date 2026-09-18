@@ -5,9 +5,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div id="app-shell">
       <header className="top">
-        <h1>
-          <span className="house-emoji">🏠</span>House Projects Hub
-        </h1>
+        <h1 className="site-title">Club Luce | Studio</h1>
         <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
           <TabNav />
           <LogoutButton />

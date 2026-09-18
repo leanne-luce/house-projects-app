@@ -56,6 +56,12 @@ export function HouseTree({
   lineItems: LineItem[];
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(houses.map((h) => h.id)));
+  // Rooms are collapsible too, independent of the house they're in — keyed
+  // by room id, with a synthetic `${houseId}:none` key for the "not in a
+  // specific room" bucket. Expanded by default, same as houses.
+  const [expandedRooms, setExpandedRooms] = useState<Set<string>>(
+    () => new Set([...rooms.map((r) => r.id), ...houses.map((h) => `${h.id}:none`)])
+  );
   const [modal, setModal] = useState<ModalState>(null);
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -65,6 +71,15 @@ export function HouseTree({
       const next = new Set(prev);
       if (next.has(houseId)) next.delete(houseId);
       else next.add(houseId);
+      return next;
+    });
+  }
+
+  function toggleRoom(key: string) {
+    setExpandedRooms((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
@@ -139,82 +154,87 @@ export function HouseTree({
 
             {open ? (
               <div className="house-body">
-                {houseRooms.map((r) => {
-                  const ds = detailsForRoom(details, r.id);
-                  const rr = roomRollup(details, materialItems, lineItems, r.id);
-                  return (
-                    <div className="room-block" key={r.id}>
-                      <div className="room-head">
-                        <input
-                          className="room-name-input"
-                          defaultValue={r.name}
-                          onBlur={(e) => {
-                            if (e.target.value.trim() && e.target.value !== r.name) {
-                              startTransition(() => updateRoom(r.id, { name: e.target.value.trim() }));
-                            }
-                          }}
-                        />
-                        <span style={{ fontSize: "0.72rem", color: "var(--text-faint)" }}>
-                          {money(rr.actual)}
-                          {rr.rough ? ` / ${money(rr.rough)} planned` : ""}
-                          <button
-                            className="icon-btn"
-                            title="Delete room"
-                            onClick={() => {
-                              const msg = ds.length
-                                ? `${ds.length} detail(s) in this room will move up to sit directly under the house. Continue?`
-                                : "Delete this room?";
-                              if (confirm(msg)) startTransition(() => deleteRoom(r.id));
+                <div className="room-grid">
+                  {houseRooms.map((r) => {
+                    const ds = detailsForRoom(details, r.id);
+                    const rr = roomRollup(details, materialItems, lineItems, r.id);
+                    return (
+                      <RoomCard
+                        key={r.id}
+                        title={
+                          <input
+                            className="room-name-input"
+                            defaultValue={r.name}
+                            onClick={(e) => e.stopPropagation()}
+                            onBlur={(e) => {
+                              if (e.target.value.trim() && e.target.value !== r.name) {
+                                startTransition(() => updateRoom(r.id, { name: e.target.value.trim() }));
+                              }
                             }}
-                          >
-                            ✕
-                          </button>
-                        </span>
-                      </div>
-                      {ds.length ? (
-                        ds.map((d) => (
-                          <DetailRow
-                            key={d.id}
-                            detail={d}
-                            rough={roughCost(materialItems, d.id)}
-                            actual={actualCost(lineItems, d.id)}
-                            onOpen={() => router.push(`/detail/${d.id}`)}
                           />
-                        ))
-                      ) : (
-                        <div className="empty-note">No details yet.</div>
-                      )}
-                      <div className="add-row-btns">
-                        <button
-                          className="ghost"
-                          onClick={() => setModal({ type: "add-detail", houseId: h.id, roomId: r.id })}
-                        >
-                          + Add detail
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                        }
+                        rollup={rr}
+                        open={expandedRooms.has(r.id)}
+                        onToggle={() => toggleRoom(r.id)}
+                        onDelete={() => {
+                          const msg = ds.length
+                            ? `${ds.length} detail(s) in this room will move up to sit directly under the house. Continue?`
+                            : "Delete this room?";
+                          if (confirm(msg)) startTransition(() => deleteRoom(r.id));
+                        }}
+                      >
+                        {ds.length ? (
+                          ds.map((d) => (
+                            <DetailRow
+                              key={d.id}
+                              detail={d}
+                              rough={roughCost(materialItems, d.id)}
+                              actual={actualCost(lineItems, d.id)}
+                              onOpen={() => router.push(`/detail/${d.id}`)}
+                            />
+                          ))
+                        ) : (
+                          <div className="empty-note">No details yet.</div>
+                        )}
+                        <div className="add-row-btns">
+                          <button
+                            className="ghost"
+                            onClick={() => setModal({ type: "add-detail", houseId: h.id, roomId: r.id })}
+                          >
+                            + Add detail
+                          </button>
+                        </div>
+                      </RoomCard>
+                    );
+                  })}
 
-                <div className="room-block">
-                  <div className="room-head">
-                    <span className="room-name">{houseRooms.length ? "Not in a specific room" : "Details"}</span>
-                  </div>
-                  {directDetails.length ? (
-                    directDetails.map((d) => (
-                      <DetailRow
-                        key={d.id}
-                        detail={d}
-                        rough={roughCost(materialItems, d.id)}
-                        actual={actualCost(lineItems, d.id)}
-                        onOpen={() => router.push(`/detail/${d.id}`)}
-                      />
-                    ))
-                  ) : (
-                    <div className="empty-note">
-                      {houseRooms.length ? "Nothing loose here." : "No details yet."}
-                    </div>
-                  )}
+                  <RoomCard
+                    title={<span className="room-name">{houseRooms.length ? "Not in a specific room" : "Details"}</span>}
+                    rollup={{
+                      count: directDetails.length,
+                      rough: directDetails.reduce((s, d) => s + roughCost(materialItems, d.id), 0),
+                      actual: directDetails.reduce((s, d) => s + actualCost(lineItems, d.id), 0),
+                      counts: statusCounts(directDetails),
+                    }}
+                    open={expandedRooms.has(`${h.id}:none`)}
+                    onToggle={() => toggleRoom(`${h.id}:none`)}
+                  >
+                    {directDetails.length ? (
+                      directDetails.map((d) => (
+                        <DetailRow
+                          key={d.id}
+                          detail={d}
+                          rough={roughCost(materialItems, d.id)}
+                          actual={actualCost(lineItems, d.id)}
+                          onOpen={() => router.push(`/detail/${d.id}`)}
+                        />
+                      ))
+                    ) : (
+                      <div className="empty-note">
+                        {houseRooms.length ? "Nothing loose here." : "No details yet."}
+                      </div>
+                    )}
+                  </RoomCard>
                 </div>
 
                 <div className="add-row-btns">
@@ -262,6 +282,75 @@ export function HouseTree({
             onHouseAdded={(h) => setExpanded((prev) => new Set(prev).add(h.id))}
           /> : null}
     </>
+  );
+}
+
+function statusCounts(ds: Detail[]): Record<string, number> {
+  const counts: Record<string, number> = { not_started: 0, in_progress: 0, done: 0, on_hold: 0 };
+  for (const d of ds) {
+    const key = d.status || "not_started";
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  return counts;
+}
+
+const STATUS_ORDER = ["not_started", "in_progress", "on_hold", "done"] as const;
+
+function RoomCard({
+  title,
+  rollup,
+  open,
+  onToggle,
+  onDelete,
+  children,
+}: {
+  title: React.ReactNode;
+  rollup: { count: number; rough: number; actual: number; counts: Record<string, number> };
+  open: boolean;
+  onToggle: () => void;
+  onDelete?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="room-card">
+      <div className="room-card-head" onClick={onToggle}>
+        <span className={`chev ${open ? "open" : ""}`}>▸</span>
+        <div className="room-card-title">
+          {title}
+          <div className="room-card-stats">
+            {rollup.count} detail{rollup.count === 1 ? "" : "s"} · {money(rollup.actual)}
+            {rollup.rough ? ` / ${money(rollup.rough)}` : ""}
+          </div>
+          {rollup.count ? (
+            <div className="room-status-bar">
+              {STATUS_ORDER.map((status) =>
+                rollup.counts[status] ? (
+                  <div
+                    key={status}
+                    className={`room-status-seg ${status}`}
+                    style={{ flex: rollup.counts[status] }}
+                    title={`${rollup.counts[status]} ${STATUS_LABEL[status].toLowerCase()}`}
+                  />
+                ) : null
+              )}
+            </div>
+          ) : null}
+        </div>
+        {onDelete ? (
+          <button
+            className="icon-btn"
+            title="Delete room"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+          >
+            ✕
+          </button>
+        ) : null}
+      </div>
+      {open ? <div className="room-card-body">{children}</div> : null}
+    </div>
   );
 }
 

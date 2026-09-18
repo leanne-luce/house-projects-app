@@ -9,7 +9,7 @@ export function LoginForm({ from }: { from: string }) {
   return (
     <div className="login-wrap">
       <form action={formAction} className="card login-card">
-        <h1>🏠 House Projects Hub</h1>
+        <h1 className="site-title">Club Luce | Studio</h1>
         <div className="field">
           <label className="field-label" htmlFor="passphrase">
             Passphrase
