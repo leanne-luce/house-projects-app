@@ -22,10 +22,14 @@ import {
   boardImages,
   paletteSwatches,
   progressPhotos,
+  receipts,
+  receiptLineItems,
 } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { saveAsset } from "./storage";
+import { saveAsset, saveAssetBuffer, readAssetBuffer } from "./storage";
+import { runOcr, parseReceiptLines } from "./ocr";
+import crypto from "node:crypto";
 
 function revalidateEverything() {
   // Personal-scale app, cheap to over-invalidate rather than track exactly
@@ -368,5 +372,163 @@ export async function addProgressPhoto(formData: FormData) {
 
 export async function deleteProgressPhoto(id: string) {
   await db.delete(progressPhotos).where(eq(progressPhotos.id, id));
+  revalidateEverything();
+}
+
+// ---------- Receipts + OCR (Phase 4) ----------
+// Upload -> hash -> dedupe warning -> server-side OCR -> pending line items
+// -> assign/dismiss -> auto-flip to logged, per PLAN.md's Phase 4 section.
+// Receipts are deliberately never run through compressImage() client-side
+// (unlike every other photo upload in this app) — OCR needs the sharpest
+// text it can get, and re-encoding a receipt photo at lower quality would
+// work against that for no benefit (receipts are typically much smaller
+// files than a full photo anyway).
+
+function sha256(buffer: Buffer): string {
+  return crypto.createHash("sha256").update(buffer).digest("hex");
+}
+
+async function maybeMarkReceiptLogged(receiptId: string) {
+  const items = await db.select().from(receiptLineItems).where(eq(receiptLineItems.receiptId, receiptId));
+  if (items.length && items.every((i) => i.status !== "pending")) {
+    await db.update(receipts).set({ status: "logged" }).where(eq(receipts.id, receiptId));
+  }
+}
+
+async function extractAndStoreLineItems(receiptId: string, imageBuffer: Buffer) {
+  await db.update(receipts).set({ status: "processing", ocrError: null }).where(eq(receipts.id, receiptId));
+
+  const result = await runOcr(imageBuffer);
+  if ("error" in result) {
+    await db.update(receipts).set({ status: "new", ocrError: result.error }).where(eq(receipts.id, receiptId));
+    return;
+  }
+
+  const found = parseReceiptLines(result.text);
+
+  // DEVIATION from the prototype: re-scanning there just appended newly
+  // found items on top of whatever was already there, so clicking
+  // "Re-scan" more than once would pile up duplicate pending items. This
+  // clears out still-pending items first (leaving anything already
+  // assigned or dismissed untouched — those represent a real decision
+  // already made) before inserting the fresh batch.
+  await db
+    .delete(receiptLineItems)
+    .where(and(eq(receiptLineItems.receiptId, receiptId), eq(receiptLineItems.status, "pending")));
+
+  for (const item of found) {
+    await db.insert(receiptLineItems).values({
+      receiptId,
+      description: item.description,
+      amount: String(item.amount),
+      status: "pending",
+    });
+  }
+
+  await db
+    .update(receipts)
+    .set({
+      status: "new",
+      ocrText: result.text,
+      ocrError: found.length ? null : "Scanned it, but couldn't confidently pick out line items — add them by hand below.",
+    })
+    .where(eq(receipts.id, receiptId));
+
+  await maybeMarkReceiptLogged(receiptId);
+}
+
+export async function uploadReceipt(
+  formData: FormData
+): Promise<{ id: string } | { duplicate: true; uploadedAt: string | null } | { error: string }> {
+  const file = formData.get("file") as File | null;
+  const force = formData.get("force") === "true";
+  if (!file || file.size === 0) return { error: "No file provided." };
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const hash = sha256(buffer);
+
+  if (!force) {
+    const [existing] = await db.select().from(receipts).where(eq(receipts.imageHash, hash)).limit(1);
+    if (existing) {
+      return { duplicate: true, uploadedAt: existing.uploadedAt?.toISOString() ?? null };
+    }
+  }
+
+  const saved = await saveAssetBuffer(buffer, file.name, file.type || "image/jpeg");
+  const [assetRow] = await db.insert(assets).values(saved).returning();
+  const [receiptRow] = await db
+    .insert(receipts)
+    .values({ assetId: assetRow.id, imageHash: hash, status: "new" })
+    .returning();
+
+  await extractAndStoreLineItems(receiptRow.id, buffer);
+  revalidateEverything();
+  return { id: receiptRow.id };
+}
+
+export async function rescanReceipt(receiptId: string) {
+  const [receipt] = await db.select().from(receipts).where(eq(receipts.id, receiptId)).limit(1);
+  if (!receipt) return;
+  const [asset] = await db.select().from(assets).where(eq(assets.id, receipt.assetId)).limit(1);
+  if (!asset) return;
+
+  try {
+    const buffer = await readAssetBuffer(asset.url);
+    await extractAndStoreLineItems(receiptId, buffer);
+  } catch (err) {
+    console.error("rescan failed to read asset", err);
+    await db
+      .update(receipts)
+      .set({ status: "new", ocrError: "Couldn't re-read the receipt image — try uploading it again." })
+      .where(eq(receipts.id, receiptId));
+  }
+  revalidateEverything();
+}
+
+export async function assignReceiptLineItem(itemId: string, detailId: string) {
+  const [item] = await db.select().from(receiptLineItems).where(eq(receiptLineItems.id, itemId)).limit(1);
+  if (!item) return;
+  const [receipt] = await db.select().from(receipts).where(eq(receipts.id, item.receiptId)).limit(1);
+
+  await db.insert(lineItems).values({
+    detailId,
+    description: item.description,
+    cost: item.amount,
+    vendor: "",
+    date: (receipt?.uploadedAt?.toISOString() ?? new Date().toISOString()).slice(0, 10),
+    receiptAssetId: receipt?.assetId ?? null,
+  });
+  await db
+    .update(receiptLineItems)
+    .set({ status: "assigned", assignedDetailId: detailId })
+    .where(eq(receiptLineItems.id, itemId));
+  await maybeMarkReceiptLogged(item.receiptId);
+  revalidateEverything();
+}
+
+export async function dismissReceiptLineItem(itemId: string) {
+  const [item] = await db.select().from(receiptLineItems).where(eq(receiptLineItems.id, itemId)).limit(1);
+  if (!item) return;
+  await db.update(receiptLineItems).set({ status: "dismissed" }).where(eq(receiptLineItems.id, itemId));
+  await maybeMarkReceiptLogged(item.receiptId);
+  revalidateEverything();
+}
+
+export async function addManualReceiptItem(receiptId: string, description: string, amount: string) {
+  if (!description.trim()) return;
+  await db.insert(receiptLineItems).values({
+    receiptId,
+    description: description.trim(),
+    amount: amount || "0",
+    status: "pending",
+  });
+  // A new pending item means this receipt is no longer fully logged.
+  await db.update(receipts).set({ status: "new" }).where(eq(receipts.id, receiptId));
+  revalidateEverything();
+}
+
+export async function deleteReceipt(id: string) {
+  await db.delete(receiptLineItems).where(eq(receiptLineItems.receiptId, id));
+  await db.delete(receipts).where(eq(receipts.id, id));
   revalidateEverything();
 }

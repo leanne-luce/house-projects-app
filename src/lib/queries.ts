@@ -14,8 +14,10 @@ import {
   boardImages,
   paletteSwatches,
   progressPhotos,
+  receipts,
+  receiptLineItems,
 } from "@/db/schema";
-import { asc } from "drizzle-orm";
+import { asc, desc } from "drizzle-orm";
 
 export async function getHousesTreeData() {
   const [housesRows, roomsRows, detailsRows, materialsRows, lineItemsRows] = await Promise.all([
@@ -47,6 +49,8 @@ export async function getDetailPageData(detailId: string) {
     allBoardImages,
     allSwatches,
     allProgressPhotos,
+    allReceiptLineItems,
+    allReceipts,
   ] = await Promise.all([
     db.select().from(houses),
     db.select().from(rooms),
@@ -59,6 +63,8 @@ export async function getDetailPageData(detailId: string) {
     db.select().from(boardImages).orderBy(asc(boardImages.createdAt)),
     db.select().from(paletteSwatches).orderBy(asc(paletteSwatches.createdAt)),
     db.select().from(progressPhotos).orderBy(asc(progressPhotos.createdAt)),
+    db.select().from(receiptLineItems),
+    db.select().from(receipts),
   ]);
   const detail = detailRows.find((d) => d.id === detailId) || null;
   return {
@@ -74,6 +80,10 @@ export async function getDetailPageData(detailId: string) {
     boardImages: allBoardImages.filter((b) => b.detailId === detailId),
     paletteSwatches: allSwatches.filter((s) => s.detailId === detailId),
     progressPhotos: allProgressPhotos.filter((p) => p.detailId === detailId),
+    pendingReceiptItems: allReceiptLineItems.filter((i) => i.status === "pending"),
+    receiptDates: Object.fromEntries(
+      allReceipts.map((r) => [r.id, r.uploadedAt ? r.uploadedAt.toISOString() : null])
+    ),
   };
 }
 
@@ -97,4 +107,15 @@ export async function getInboxTabData() {
 export async function getHorizonData() {
   const detailsRows = await db.select().from(details);
   return { details: detailsRows };
+}
+
+export async function getReceiptsTabData() {
+  const [receiptRows, itemRows, detailsRows, housesRows, roomsRows] = await Promise.all([
+    db.select().from(receipts).orderBy(desc(receipts.uploadedAt)),
+    db.select().from(receiptLineItems).orderBy(asc(receiptLineItems.createdAt)),
+    db.select().from(details).orderBy(asc(details.createdAt)),
+    db.select().from(houses).orderBy(asc(houses.createdAt)),
+    db.select().from(rooms).orderBy(asc(rooms.createdAt)),
+  ]);
+  return { receipts: receiptRows, receiptLineItems: itemRows, details: detailsRows, houses: housesRows, rooms: roomsRows };
 }

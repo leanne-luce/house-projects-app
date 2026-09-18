@@ -1,6 +1,6 @@
 import "server-only";
 import { put } from "@vercel/blob";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 
@@ -8,23 +8,25 @@ import crypto from "node:crypto";
 // configured (production), and falls back to local disk + a small route
 // handler (src/app/api/uploads/[...path]/route.ts) when it isn't. This
 // keeps image upload flows (mood board, reference collection, progress
-// photos, receipts once Phase 4 lands) fully testable in local development
-// without needing a Vercel project first — the same reasoning as the DB
-// driver swap in src/db/index.ts, flagged in PLAN.md. Deploying with a real
+// photos, receipts) fully testable in local development without needing a
+// Vercel project first — the same reasoning as the DB driver swap in
+// src/db/index.ts, flagged in PLAN.md. Deploying with a real
 // BLOB_READ_WRITE_TOKEN set switches this to real Blob storage with no code
 // changes needed.
 
 const LOCAL_UPLOAD_DIR = path.join(process.cwd(), ".uploads");
 
-export async function saveAsset(
-  file: File
+async function saveBuffer(
+  buffer: Buffer,
+  filename: string,
+  contentType: string
 ): Promise<{ url: string; contentType: string; sizeBytes: number }> {
-  const contentType = file.type || "application/octet-stream";
-  const sizeBytes = file.size;
+  const sizeBytes = buffer.byteLength;
 
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const blob = await put(`assets/${crypto.randomUUID()}-${file.name}`, file, {
+    const blob = await put(`assets/${crypto.randomUUID()}-${filename}`, buffer, {
       access: "public",
+      contentType,
       token: process.env.BLOB_READ_WRITE_TOKEN,
       addRandomSuffix: false,
     });
@@ -32,9 +34,40 @@ export async function saveAsset(
   }
 
   await mkdir(LOCAL_UPLOAD_DIR, { recursive: true });
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const filename = `${crypto.randomUUID()}-${safeName}`;
-  const buf = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(LOCAL_UPLOAD_DIR, filename), buf);
-  return { url: `/api/uploads/${filename}`, contentType, sizeBytes };
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const outName = `${crypto.randomUUID()}-${safeName}`;
+  await writeFile(path.join(LOCAL_UPLOAD_DIR, outName), buffer);
+  return { url: `/api/uploads/${outName}`, contentType, sizeBytes };
+}
+
+export async function saveAsset(
+  file: File
+): Promise<{ url: string; contentType: string; sizeBytes: number }> {
+  const buffer = Buffer.from(await file.arrayBuffer());
+  return saveBuffer(buffer, file.name, file.type || "application/octet-stream");
+}
+
+// For callers that already have the raw bytes in hand for another reason
+// (receipts need the buffer anyway to compute a dedupe hash) — avoids
+// reading the same File twice.
+export async function saveAssetBuffer(
+  buffer: Buffer,
+  filename: string,
+  contentType: string
+): Promise<{ url: string; contentType: string; sizeBytes: number }> {
+  return saveBuffer(buffer, filename, contentType);
+}
+
+// Re-reads an already-stored asset's bytes (needed to re-run OCR on a
+// receipt without asking for a fresh upload). Handles both backends: a
+// real URL (Vercel Blob) gets fetched over HTTP, a local path
+// (/api/uploads/<name>, the dev fallback) is read straight off disk.
+export async function readAssetBuffer(url: string): Promise<Buffer> {
+  if (/^https?:\/\//i.test(url)) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to fetch asset (${res.status})`);
+    return Buffer.from(await res.arrayBuffer());
+  }
+  const filename = path.basename(url);
+  return readFile(path.join(LOCAL_UPLOAD_DIR, filename));
 }

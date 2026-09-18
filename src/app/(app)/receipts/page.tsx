@@ -1,8 +1,17 @@
-export default function ReceiptsPage() {
+import { getReceiptsTabData } from "@/lib/queries";
+import { ReceiptsList } from "./receipts-list";
+
+export const dynamic = "force-dynamic";
+
+export default async function ReceiptsPage() {
+  const data = await getReceiptsTabData();
   return (
-    <div className="empty-state">
-      <div className="big-emoji">🧾</div>
-      Receipts + server-side OCR is coming in Phase 4.
-    </div>
+    <ReceiptsList
+      receipts={data.receipts}
+      receiptLineItems={data.receiptLineItems}
+      details={data.details}
+      houses={data.houses}
+      rooms={data.rooms}
+    />
   );
 }

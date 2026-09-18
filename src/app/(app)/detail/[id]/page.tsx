@@ -21,6 +21,8 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       boardImages={data.boardImages}
       paletteSwatches={data.paletteSwatches}
       progressPhotos={data.progressPhotos}
+      pendingReceiptItems={data.pendingReceiptItems}
+      receiptDates={data.receiptDates}
     />
   );
 }

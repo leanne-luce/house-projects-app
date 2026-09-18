@@ -22,6 +22,7 @@ import { ReferencesPanel } from "./references-panel";
 import { NotesPanel } from "./notes-panel";
 import { PalettePanel } from "./palette-panel";
 import { ProgressPhotosPanel } from "./progress-photos-panel";
+import { UnassignedReceiptItemsPanel } from "./unassigned-receipt-items-panel";
 import type {
   details as detailsTable,
   houses as housesTable,
@@ -33,6 +34,7 @@ import type {
   boardImages as boardImagesTable,
   paletteSwatches as paletteSwatchesTable,
   progressPhotos as progressPhotosTable,
+  receiptLineItems as receiptLineItemsTable,
 } from "@/db/schema";
 
 type Detail = typeof detailsTable.$inferSelect;
@@ -45,6 +47,7 @@ type InboxItem = typeof inboxItemsTable.$inferSelect;
 type BoardImage = typeof boardImagesTable.$inferSelect;
 type Swatch = typeof paletteSwatchesTable.$inferSelect;
 type ProgressPhoto = typeof progressPhotosTable.$inferSelect;
+type ReceiptLineItem = typeof receiptLineItemsTable.$inferSelect;
 
 const STATUS_LABEL: Record<string, string> = {
   not_started: "Not started",
@@ -111,6 +114,8 @@ export function DetailPageClient({
   boardImages,
   paletteSwatches,
   progressPhotos,
+  pendingReceiptItems,
+  receiptDates,
 }: {
   detail: Detail;
   houses: House[];
@@ -122,6 +127,8 @@ export function DetailPageClient({
   boardImages: BoardImage[];
   paletteSwatches: Swatch[];
   progressPhotos: ProgressPhoto[];
+  pendingReceiptItems: ReceiptLineItem[];
+  receiptDates: Record<string, string | null>;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -264,6 +271,8 @@ export function DetailPageClient({
         <PalettePanel detailId={detail.id} swatches={paletteSwatches} />
 
         <ProgressPhotosPanel detailId={detail.id} photos={progressPhotos} />
+
+        <UnassignedReceiptItemsPanel detailId={detail.id} items={pendingReceiptItems} receiptDates={receiptDates} />
 
         {filedInbox.length ? (
           <div className="panel-card">
@@ -432,6 +441,7 @@ function SpendPanel({ detailId, lines }: { detailId: string; lines: LineItem[] }
       {lines.length ? (
         lines.map((l) => (
           <div className="list-item" key={l.id}>
+            {l.receiptAssetId ? <img className="receipt-thumb" src={`/asset/${l.receiptAssetId}`} alt="receipt" /> : null}
             <div className="list-item-main">
               <input
                 defaultValue={l.description}

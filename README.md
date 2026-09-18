@@ -60,7 +60,28 @@ project yet. Uploaded images are compressed client-side (resize to ~1600px,
 JPEG ~78% quality) before they leave the browser, per the free-tier cost
 model.
 
-Phase 4 (receipts + server-side OCR) is next.
+Phase 4 (receipts + server-side OCR) is also done. Load-tested tesseract.js
+before building around it (see PLAN.md's Phase 4 note): ~350ms warm /
+~700ms cold for a full receipt image, comfortably inside any serverless
+function budget. One real deployment gotcha found and fixed: tesseract.js
+spawns a genuine Node worker_threads worker pointing at a file on disk,
+which breaks under Next.js's default bundling ("Cannot find module
+.../worker-script/node/index.js") — fixed via `serverExternalPackages` in
+next.config.ts, which tells Next.js to require it directly from
+node_modules at runtime instead of bundling it.
+
+Deviation from the prototype (flagged): re-scanning a receipt there just
+appended newly-found items on top of whatever was already pending, so
+clicking "Re-scan" more than once would pile up duplicates. Re-scanning
+here clears out still-pending items first (anything already assigned or
+dismissed is left alone, since that represents a real decision already
+made) before inserting the fresh batch.
+
+Receipts are deliberately never run through the client-side image
+compression every other photo upload gets — OCR needs the sharpest text
+it can get, and re-encoding at lower quality works against that.
+
+Phase 5 (Overview dashboard) is next.
 
 ## Scripts
 
