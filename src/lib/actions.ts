@@ -116,6 +116,7 @@ export async function updateDetail(
     scratchpad: string | null;
     estimatedSpend: string | null;
     pinterestBoardUrl: string | null;
+    notes: string | null;
   }>
 ) {
   await db.update(details).set(patch).where(eq(details.id, id));

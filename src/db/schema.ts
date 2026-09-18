@@ -73,6 +73,11 @@ export const details = pgTable(
     scratchpad: text("scratchpad"),
     estimatedSpend: numeric("estimated_spend"),
     pinterestBoardUrl: text("pinterest_board_url"),
+    // DEVIATION (addition, not in build brief section 6): a plain free-text
+    // notes field for anything that isn't a calculation (that's what
+    // scratchpad is for) — links, stray context, reminders. Added on
+    // request.
+    notes: text("notes"),
     createdAt: createdAt(),
   },
   (table) => [

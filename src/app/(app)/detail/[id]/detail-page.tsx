@@ -19,6 +19,7 @@ import {
   deleteChecklistItem,
 } from "@/lib/actions";
 import { ReferencesPanel } from "./references-panel";
+import { NotesPanel } from "./notes-panel";
 import { PalettePanel } from "./palette-panel";
 import { ProgressPhotosPanel } from "./progress-photos-panel";
 import type {
@@ -251,6 +252,8 @@ export function DetailPageClient({
         <MaterialsPanel detailId={detail.id} materials={materialItems} />
         <SpendPanel detailId={detail.id} lines={lineItems} />
         <ChecklistPanel detailId={detail.id} items={checklistItems} />
+
+        <NotesPanel detailId={detail.id} notes={detail.notes} />
 
         <ReferencesPanel
           detailId={detail.id}

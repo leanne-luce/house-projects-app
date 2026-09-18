@@ -36,7 +36,8 @@ database. That's the part that alone replaces the spreadsheet:
 - Horizon view, grouped and sorted by timeframe.
 - Detail page — editable name/status/timeframe, Estimated-vs-Actual budget
   bars (with the color flip on overspend), Materials plan, Actual spend log,
-  Checklist with a progress bar, Move, and a Danger Zone delete.
+  Checklist with a progress bar, a free-text Notes field (any URL in it
+  renders as a clickable link), Move, and a Danger Zone delete.
 
 Deviation from the original driver plan: `src/db/index.ts` uses `postgres.js`
 against a standard Postgres connection string rather than Neon's HTTP-only
