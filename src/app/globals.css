@@ -14,11 +14,16 @@
     --accent: #9D8B5E;
     --accent-strong: #7A6A45;
     --accent-soft: #EDE4CC;
-    --good: #7BA878;
+    /* good/warn/danger darkened from the prototype's original values —
+       #7BA878/#C9A961/#B5645A read at 2.3:1/2.0:1/3.5:1 against their own
+       -soft backgrounds when used as status-pill text, well under WCAG AA's
+       4.5:1 for normal-size text. Same hue, darker so it's actually
+       readable; -soft backgrounds and dark-mode values are unchanged. */
+    --good: #4D744B;
     --good-soft: #E4EFE1;
-    --warn: #C9A961;
+    --warn: #84692D;
     --warn-soft: #F6EFDB;
-    --danger: #B5645A;
+    --danger: #A05148;
     --danger-soft: #F5E4E1;
     --radius: 14px;
     --radius-sm: 9px;
@@ -33,7 +38,7 @@
       --border: #3C3728;
       --text: #EFE9DA;
       --text-muted: #B5AB92;
-      --text-faint: #7C755F;
+      --text-faint: #989179; /* lightened for AA contrast, see light-mode note */
       --accent: #C9B583;
       --accent-strong: #DCC998;
       --accent-soft: #3A331F;
@@ -53,7 +58,7 @@
     --border: #3C3728;
     --text: #EFE9DA;
     --text-muted: #B5AB92;
-    --text-faint: #7C755F;
+    --text-faint: #989179;
     --accent: #C9B583;
     --accent-strong: #DCC998;
     --accent-soft: #3A331F;
@@ -156,7 +161,9 @@
   .room-card-head { display:flex; align-items:center; gap:0.5rem; padding:0.65rem 0.75rem 0.65rem 0.9rem; cursor:pointer; }
   .room-card-head .chev { flex-shrink:0; font-size:0.85rem; }
   .room-card-title { min-width:0; flex:1; }
-  .room-card-stats { font-size:0.72rem; color:var(--text-faint); margin-top:0.1rem; }
+  /* text-muted, not text-faint (2.35:1 against this background — matches
+     the .house-stats pattern above, which already used text-muted). */
+  .room-card-stats { font-size:0.72rem; color:var(--text-muted); margin-top:0.1rem; }
   .room-status-bar { display:flex; height:0.35rem; border-radius:999px; overflow:hidden; background:var(--border); margin-top:0.45rem; }
   .room-status-seg.not_started { background:var(--text-faint); }
   .room-status-seg.in_progress { background:var(--warn); }
@@ -171,7 +178,7 @@
   .detail-name { font-weight:600; font-size:0.9rem; }
   .detail-meta { font-size:0.76rem; color:var(--text-muted); display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; }
   .status-pill { font-size:0.68rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:999px; text-transform:uppercase; letter-spacing:0.02em; }
-  .status-not_started { background:var(--surface-2); color:var(--text-faint); border:1px solid var(--border); }
+  .status-not_started { background:var(--surface-2); color:var(--text-muted); border:1px solid var(--border); }
   .status-in_progress { background:var(--warn-soft); color:var(--warn); }
   .status-done { background:var(--good-soft); color:var(--good); }
   .status-on_hold { background:var(--danger-soft); color:var(--danger); }
@@ -342,6 +349,19 @@
   .progress-thumb { width:100%; aspect-ratio:1; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--border); display:block; }
   .progress-photo-item .icon-btn { position:absolute; top:0.15rem; right:0.15rem; background:rgba(20,16,8,0.6); color:#fff; border-radius:50%; width:1.2rem; height:1.2rem; font-size:0.65rem; display:flex; align-items:center; justify-content:center; padding:0; }
   .progress-file { width:100%; font-size:0.66rem; margin-top:0.15rem; }
+
+  /* Look book */
+  .lookbook-house { font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.03em; margin:1.4rem 0 0.6rem; }
+  .lookbook-house:first-child { margin-top:0; }
+  .lookbook-card { margin-bottom:0.9rem; padding:1rem; }
+  .lookbook-card-head { display:flex; align-items:baseline; justify-content:space-between; gap:0.6rem; margin-bottom:0.8rem; text-decoration:none; color:inherit; }
+  .lookbook-card-head:hover .lookbook-name { text-decoration:underline; }
+  .lookbook-name { font-weight:700; font-size:0.95rem; }
+  .lookbook-cols { display:grid; grid-template-columns:repeat(auto-fit, minmax(9rem,1fr)); gap:0.8rem; }
+  .lookbook-col-title { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.02em; color:var(--text-muted); margin-bottom:0.4rem; }
+  .lookbook-col-photos { display:grid; grid-template-columns:repeat(auto-fill, minmax(6.5rem,1fr)); gap:0.4rem; }
+  .lookbook-thumb { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--border); display:block; background:var(--surface-2); }
+  .lookbook-thumb-link { display:block; }
 
 
 .login-wrap {

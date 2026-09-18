@@ -321,20 +321,21 @@ function RoomCard({
             {rollup.count} detail{rollup.count === 1 ? "" : "s"} · {money(rollup.actual)}
             {rollup.rough ? ` / ${money(rollup.rough)}` : ""}
           </div>
-          {rollup.count ? (
-            <div className="room-status-bar">
-              {STATUS_ORDER.map((status) =>
-                rollup.counts[status] ? (
-                  <div
-                    key={status}
-                    className={`room-status-seg ${status}`}
-                    style={{ flex: rollup.counts[status] }}
-                    title={`${rollup.counts[status]} ${STATUS_LABEL[status].toLowerCase()}`}
-                  />
-                ) : null
-              )}
-            </div>
-          ) : null}
+          {/* Always rendered (even with zero details, where it shows as a
+              plain --border-colored line) so every collapsed room card in a
+              row has the same head height, whether or not it has details. */}
+          <div className="room-status-bar">
+            {STATUS_ORDER.map((status) =>
+              rollup.counts[status] ? (
+                <div
+                  key={status}
+                  className={`room-status-seg ${status}`}
+                  style={{ flex: rollup.counts[status] }}
+                  title={`${rollup.counts[status]} ${STATUS_LABEL[status].toLowerCase()}`}
+                />
+              ) : null
+            )}
+          </div>
         </div>
         {onDelete ? (
           <button

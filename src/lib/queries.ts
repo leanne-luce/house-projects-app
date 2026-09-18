@@ -113,6 +113,43 @@ export async function getHorizonData() {
   return { details: detailsRows };
 }
 
+export async function getOverviewData() {
+  const [housesRows, roomsRows, detailsRows, materialsRows, lineItemsRows, inboxRows] =
+    await Promise.all([
+      db.select().from(houses).orderBy(asc(houses.createdAt)),
+      db.select().from(rooms).orderBy(asc(rooms.createdAt)),
+      db.select().from(details).orderBy(asc(details.createdAt)),
+      db.select().from(materialItems),
+      db.select().from(lineItems),
+      db.select().from(inboxItems),
+    ]);
+  return {
+    houses: housesRows,
+    rooms: roomsRows,
+    details: detailsRows,
+    materialItems: materialsRows,
+    lineItems: lineItemsRows,
+    inboxItems: inboxRows,
+  };
+}
+
+export async function getLookBookData() {
+  const [housesRows, roomsRows, detailsRows, photoRows, assetRows] = await Promise.all([
+    db.select().from(houses).orderBy(asc(houses.createdAt)),
+    db.select().from(rooms).orderBy(asc(rooms.createdAt)),
+    db.select().from(details).orderBy(asc(details.createdAt)),
+    db.select().from(progressPhotos).orderBy(asc(progressPhotos.createdAt)),
+    db.select().from(assets),
+  ]);
+  return {
+    houses: housesRows,
+    rooms: roomsRows,
+    details: detailsRows,
+    progressPhotos: photoRows,
+    contentTypeByAssetId: Object.fromEntries(assetRows.map((a) => [a.id, a.contentType])),
+  };
+}
+
 export async function getReceiptsTabData() {
   const [receiptRows, itemRows, detailsRows, housesRows, roomsRows, assetRows] = await Promise.all([
     db.select().from(receipts).orderBy(desc(receipts.uploadedAt)),

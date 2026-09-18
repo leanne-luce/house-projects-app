@@ -8,6 +8,7 @@ const TABS = [
   { href: "/inbox", label: "Inbox" },
   { href: "/horizon", label: "Horizon" },
   { href: "/receipts", label: "Receipts" },
+  { href: "/lookbook", label: "Look Book" },
   { href: "/overview", label: "Overview" },
 ];
 
