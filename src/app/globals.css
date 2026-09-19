@@ -95,9 +95,10 @@
   .site-title { font-family: var(--font-syne), sans-serif; font-weight: 700; letter-spacing: -0.01em; }
   nav.tabs { display:flex; gap:0.25rem; background:var(--surface-2); padding:0.25rem; border-radius: 999px; overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; min-width:0; }
   nav.tabs::-webkit-scrollbar { display:none; }
-  nav.tabs a {
+  nav.tabs a, nav.tabs button {
     border:none; background:transparent; color:var(--text-muted); font-size:0.85rem; font-weight:600;
     padding:0.45rem 0.85rem; border-radius:999px; cursor:pointer; white-space:nowrap;
+    font-family:inherit; text-decoration:none; flex-shrink:0;
   }
   nav.tabs a.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
   /* House switcher — secondary sub-nav for the per-house pages (Receipts,
@@ -157,7 +158,7 @@
   .house-body { padding: 0 1rem 1rem; border-top:1px solid var(--border); }
   .room-block { margin-top:0.8rem; }
   .room-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem; }
-  .room-name { font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.03em; }
+  .room-name { font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:capitalize; letter-spacing:0.03em; }
 
   /* Room grid — rooms as collapsible cards rather than a stacked list */
   .room-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(15rem,1fr)); gap:0.7rem; margin-top:0.9rem; align-items:start; }
@@ -364,7 +365,7 @@
   /* Editable house/room fields */
   .house-name-input { font-weight:700; font-size:1rem; border:none; background:transparent; padding:0; width:100%; color:var(--text); }
   .house-address-input { font-size:0.78rem; color:var(--text-faint); border:none; background:transparent; padding:0; width:100%; margin-top:0.1rem; }
-  .room-name-input { font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.03em; border:none; background:transparent; padding:0; width:100%; }
+  .room-name-input { font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:capitalize; letter-spacing:0.03em; border:none; background:transparent; padding:0; width:100%; }
 
   /* Mood board / reference collection */
   .board-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(6.5rem,1fr)); gap:0.6rem; margin-bottom:0.6rem; }
@@ -403,6 +404,16 @@
   .lookbook-col-photos { display:grid; grid-template-columns:repeat(auto-fill, minmax(6.5rem,1fr)); gap:0.4rem; }
   .lookbook-thumb { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--border); display:block; background:var(--surface-2); }
   .lookbook-thumb-link { display:block; }
+  /* Collapsed-by-default, same plain <details>/<summary> pattern as the
+     Projects page's Done section — no client component needed. */
+  .lookbook-inspiration { margin-top:0.9rem; padding-top:0.8rem; border-top:1px solid var(--border); }
+  .lookbook-inspiration summary {
+    cursor:pointer; list-style:none; font-size:0.78rem; font-weight:700; color:var(--text-muted);
+    display:flex; align-items:center; gap:0.4rem; padding:0.2rem 0; margin-bottom:0.6rem;
+  }
+  .lookbook-inspiration summary::-webkit-details-marker { display:none; }
+  .lookbook-inspiration summary::before { content:"▸"; color:var(--text-faint); transition:transform .15s; font-size:0.74rem; }
+  .lookbook-inspiration[open] summary::before { transform:rotate(90deg); }
 
 
 .login-wrap {

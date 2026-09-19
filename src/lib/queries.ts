@@ -133,11 +133,12 @@ export async function getOverviewData() {
 }
 
 export async function getLookBookData() {
-  const [housesRows, roomsRows, detailsRows, photoRows, assetRows] = await Promise.all([
+  const [housesRows, roomsRows, detailsRows, photoRows, boardImageRows, assetRows] = await Promise.all([
     db.select().from(houses).orderBy(asc(houses.createdAt)),
     db.select().from(rooms).orderBy(asc(rooms.createdAt)),
     db.select().from(details).orderBy(asc(details.createdAt)),
     db.select().from(progressPhotos).orderBy(asc(progressPhotos.createdAt)),
+    db.select().from(boardImages).orderBy(asc(boardImages.createdAt)),
     db.select().from(assets),
   ]);
   return {
@@ -145,6 +146,7 @@ export async function getLookBookData() {
     rooms: roomsRows,
     details: detailsRows,
     progressPhotos: photoRows,
+    boardImages: boardImageRows,
     contentTypeByAssetId: Object.fromEntries(assetRows.map((a) => [a.id, a.contentType])),
   };
 }
