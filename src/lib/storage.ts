@@ -20,7 +20,14 @@ import crypto from "node:crypto";
 // cleanup commands deleted real uploaded files because test and real data
 // shared one folder. Never hardcode ".uploads" elsewhere; always go through
 // this.
-const LOCAL_UPLOAD_DIR = path.join(process.cwd(), process.env.UPLOAD_DIR || ".uploads");
+// turbopackIgnore: process.env.UPLOAD_DIR makes this path non-literal, which
+// makes Next.js's build-time file tracer fall back to tracing the entire
+// project as output — a warning in local dev, but this actually failed the
+// production build on Vercel ("Failed to collect page data for
+// /asset/[id]"). This directory is only ever read from/written to in local
+// dev anyway (real deploys use Vercel Blob instead, see saveBuffer below),
+// so there's nothing here worth tracing.
+const LOCAL_UPLOAD_DIR = path.join(/* turbopackIgnore: true */ process.cwd(), process.env.UPLOAD_DIR || ".uploads");
 
 async function saveBuffer(
   buffer: Buffer,
@@ -42,7 +49,7 @@ async function saveBuffer(
   await mkdir(LOCAL_UPLOAD_DIR, { recursive: true });
   const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
   const outName = `${crypto.randomUUID()}-${safeName}`;
-  await writeFile(path.join(LOCAL_UPLOAD_DIR, outName), buffer);
+  await writeFile(path.join(/* turbopackIgnore: true */ LOCAL_UPLOAD_DIR, outName), buffer);
   return { url: `/api/uploads/${outName}`, contentType, sizeBytes };
 }
 
@@ -74,6 +81,13 @@ export async function readAssetBuffer(url: string): Promise<Buffer> {
     if (!res.ok) throw new Error(`Failed to fetch asset (${res.status})`);
     return Buffer.from(await res.arrayBuffer());
   }
+  // turbopackIgnore: a fully dynamic (non-literal) path passed to
+  // readFile/writeFile makes Next.js's build-time file tracer try to
+  // include the entire project as a fallback — harmless as a warning
+  // locally, but this actually failed the production build on Vercel
+  // ("Failed to collect page data for /asset/[id]"). This path is dev-only
+  // anyway (only reached when BLOB_READ_WRITE_TOKEN isn't set), so there's
+  // nothing here for the tracer to usefully include.
   const filename = path.basename(url);
-  return readFile(path.join(LOCAL_UPLOAD_DIR, filename));
+  return readFile(path.join(/* turbopackIgnore: true */ LOCAL_UPLOAD_DIR, filename));
 }

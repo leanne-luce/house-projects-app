@@ -8,7 +8,9 @@ import path from "node:path";
 
 // Must match src/lib/storage.ts's LOCAL_UPLOAD_DIR exactly — same env var,
 // same default.
-const LOCAL_UPLOAD_DIR = path.join(process.cwd(), process.env.UPLOAD_DIR || ".uploads");
+// turbopackIgnore: see the matching comment in src/lib/storage.ts — this
+// non-literal path otherwise fails the production build on Vercel.
+const LOCAL_UPLOAD_DIR = path.join(/* turbopackIgnore: true */ process.cwd(), process.env.UPLOAD_DIR || ".uploads");
 
 export async function GET(_req: Request, { params }: { params: Promise<{ path: string[] }> }) {
   const { path: segments } = await params;
@@ -17,7 +19,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ path: s
     return new Response("Not found", { status: 404 });
   }
   try {
-    const data = await readFile(path.join(LOCAL_UPLOAD_DIR, filename));
+    const data = await readFile(path.join(/* turbopackIgnore: true */ LOCAL_UPLOAD_DIR, filename));
     return new Response(new Uint8Array(data), {
       headers: { "Cache-Control": "private, max-age=31536000, immutable" },
     });
