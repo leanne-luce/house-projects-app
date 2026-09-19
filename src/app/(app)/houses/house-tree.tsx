@@ -146,28 +146,35 @@ export function HouseTree({
                         }
                       }}
                     />
-                    <input
-                      className="house-address-input"
-                      type="number"
-                      min={0}
-                      step="any"
-                      defaultValue={h.purchasePrice || ""}
-                      placeholder="Purchase price"
+                    <div
                       style={{
-                        maxWidth: "8rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.15rem",
+                        maxWidth: "8.5rem",
                         flexShrink: 0,
                         borderLeft: "1px solid var(--border)",
                         paddingLeft: "0.5rem",
                       }}
-                      onClick={(e) => e.stopPropagation()}
-                      onBlur={(e) => {
-                        if (e.target.value !== (h.purchasePrice || "")) {
-                          startTransition(() =>
-                            updateHouse(h.id, { purchasePrice: e.target.value === "" ? null : e.target.value })
-                          );
-                        }
-                      }}
-                    />
+                    >
+                      <span style={{ color: "var(--text-faint)", fontSize: "0.78rem" }}>$</span>
+                      <input
+                        className="house-address-input"
+                        type="number"
+                        min={0}
+                        step="any"
+                        defaultValue={h.purchasePrice || ""}
+                        placeholder="Purchase price"
+                        onClick={(e) => e.stopPropagation()}
+                        onBlur={(e) => {
+                          if (e.target.value !== (h.purchasePrice || "")) {
+                            startTransition(() =>
+                              updateHouse(h.id, { purchasePrice: e.target.value === "" ? null : e.target.value })
+                            );
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

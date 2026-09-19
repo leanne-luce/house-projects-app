@@ -1,4 +1,5 @@
-// Formatting helpers ported verbatim from the prototype's money()/fmtDate().
+// Formatting helpers, adapted from the prototype's money()/fmtDate() — money()
+// now always rounds to the nearest whole dollar (no cents), on request.
 
 export function num(n: unknown): number {
   const v = Number(n);
@@ -7,13 +8,7 @@ export function num(n: unknown): number {
 
 export function money(n: unknown): string {
   const v = num(n);
-  return (
-    "$" +
-    v.toLocaleString(undefined, {
-      minimumFractionDigits: v % 1 ? 2 : 0,
-      maximumFractionDigits: 2,
-    })
-  );
+  return "$" + Math.round(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
 // A short "$X over" / "$X left" label for a planned-vs-actual rollup —
@@ -21,7 +16,9 @@ export function money(n: unknown): string {
 // derived.ts's hasRealBudget/estimatedSpendFor).
 export function budgetDeltaLabel(actual: number, planned: number): { text: string; over: boolean } | null {
   const diff = actual - planned;
-  if (Math.abs(diff) < 0.005) return null;
+  // Rounded to match money()'s display — a sub-dollar difference would
+  // otherwise render as a misleading "$0 over"/"$0 left".
+  if (Math.round(Math.abs(diff)) === 0) return null;
   return diff > 0 ? { text: `${money(diff)} over`, over: true } : { text: `${money(-diff)} left`, over: false };
 }
 
