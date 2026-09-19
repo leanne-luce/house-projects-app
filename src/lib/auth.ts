@@ -55,17 +55,24 @@ export async function hasValidSession(): Promise<boolean> {
 }
 
 export function checkPassphrase(input: string): boolean {
-  const expected = process.env.APP_PASSPHRASE;
-  if (!expected) {
+  const raw = process.env.APP_PASSPHRASE;
+  if (!raw) {
     throw new Error("APP_PASSPHRASE is not set. Copy .env.example to .env.local and set one.");
   }
+  // Trimmed on both sides: a trailing newline is an easy, invisible thing
+  // to end up with in an env var's value (pasting into a dashboard field,
+  // `vercel env add` reading from a piped/echoed value, etc.), and this
+  // comparison is exact-length, so a stray trailing "\n" alone is enough
+  // to make an otherwise-correct passphrase fail silently.
+  const expected = raw.trim();
+  const value = input.trim();
+  if (value.length !== expected.length) return false;
   // Constant-time-ish comparison to avoid trivial timing leaks on a
   // single-user gate. Not a full security-critical auth system — matches
   // the "single owner, no OAuth" scope this needs.
-  if (input.length !== expected.length) return false;
   let mismatch = 0;
-  for (let i = 0; i < input.length; i++) {
-    mismatch |= input.charCodeAt(i) ^ expected.charCodeAt(i);
+  for (let i = 0; i < value.length; i++) {
+    mismatch |= value.charCodeAt(i) ^ expected.charCodeAt(i);
   }
   return mismatch === 0;
 }
