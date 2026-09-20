@@ -1,0 +1,12 @@
+/* Club Luce has no shadows and no rounded corners. Surfaces are separated
+   by hairline rules and whitespace alone. The only curved thing in the
+   system is a status pill, which is a pill by definition. */
+:root{
+--radius:0;
+--radius-sm:0;
+--radius-pill:999px;
+--shadow:none;
+--hairline:1px solid var(--border);
+--rule-strong:1.5px solid var(--brown);
+--rule-accent:2px solid var(--brass);
+}

@@ -1,0 +1,66 @@
+<!-- @dsCard group="Club Luce | Studio" viewport="1100x760" name="Studio app" subtitle="Click-through recreation: login, houses, inbox, projects, receipts, lookbook, overview" -->
+<!-- @startingPoint section="Club Luce | Studio" subtitle="Full Studio app shell with all six tabs" viewport="1100x760" -->
+<!doctype html><html><head><meta charset="utf-8"><title>Club Luce | Studio — UI kit</title>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script src="./data.js"></script>
+</head><body>
+<div id="root"></div>
+<script type="text/babel" src="./AppShell.jsx"></script>
+<script type="text/babel" src="./HousesScreen.jsx"></script>
+<script type="text/babel" src="./InboxScreen.jsx"></script>
+<script type="text/babel" src="./ProjectsScreen.jsx"></script>
+<script type="text/babel" src="./ReceiptsScreen.jsx"></script>
+<script type="text/babel" src="./LookbookScreen.jsx"></script>
+<script type="text/babel" src="./OverviewScreen.jsx"></script>
+<script type="text/babel" src="./DetailScreen.jsx"></script>
+<script type="text/babel" src="./LoginScreen.jsx"></script>
+<script type="text/babel">
+const { Modal, Field, TextInput, Textarea, Button, Toast } = window.ClubLuceDesignSystem_b992b6;
+
+function App() {
+  const [authed, setAuthed] = React.useState(false);
+  const [tab, setTab] = React.useState("houses");
+  const [house, setHouse] = React.useState("rosewood");
+  const [detail, setDetail] = React.useState(null);
+  const [capture, setCapture] = React.useState(false);
+  const [toast, setToast] = React.useState(null);
+  const [data, setData] = React.useState(window.CLUB_LUCE_DATA);
+
+  const say = (m) => { setToast(m); setTimeout(() => setToast(null), 1800); };
+  const open = (d) => { setDetail(d); };
+
+  if (!authed) return <LoginScreen onEnter={() => setAuthed(true)} />;
+
+  return (
+    <AppShell tab={tab} onTab={(t) => { setTab(t); setDetail(null); }} onCapture={() => setCapture(true)}>
+      {detail ? <DetailScreen detail={detail} data={data} onBack={() => setDetail(null)} /> : (
+        tab === "houses" ? <HousesScreen data={data} onOpen={open} /> :
+        tab === "inbox" ? <InboxScreen items={data.inbox}
+            onAdd={(text) => { setData({ ...data, inbox: [{ id: "n" + Date.now(), text, time: "Just now", photo: false }, ...data.inbox] }); say("Added to inbox"); }}
+            onDiscard={(id) => { setData({ ...data, inbox: data.inbox.filter((i) => i.id !== id) }); say("Discarded"); }}
+            onFile={(id, detailId) => { setData({ ...data, inbox: data.inbox.filter((i) => i.id !== id) }); say("Filed"); setDetail(data.details.find((d) => d.id === detailId)); }} /> :
+        tab === "projects" ? <ProjectsScreen data={data} onOpen={open} /> :
+        tab === "receipts" ? <ReceiptsScreen data={data} houseId={house} onHouse={setHouse} /> :
+        tab === "lookbook" ? <LookbookScreen data={data} houseId={house} onHouse={setHouse} /> :
+        <OverviewScreen data={data} houseId={house} onHouse={setHouse} onOpen={open} />
+      )}
+      {capture ? (
+        <Modal title="Quick capture" onClose={() => setCapture(false)}>
+          <Field label="What is it?"><Textarea rows={3} placeholder="A stray thought, a material, a link…" /></Field>
+          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+            <Button variant="secondary" onClick={() => setCapture(false)}>Cancel</Button>
+            <Button variant="primary" onClick={() => { setCapture(false); say("Added to inbox"); }}>Add to inbox</Button>
+          </div>
+        </Modal>
+      ) : null}
+      {toast ? <Toast>{toast}</Toast> : null}
+    </AppShell>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body></html>

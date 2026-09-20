@@ -1,0 +1,74 @@
+/* Club Luce palette — the source of truth is clubluce.com (leanne-luce/club-luce).
+   Club Luce | Studio's app palette is reconciled to it below. */
+:root{
+/* ── Brand ──────────────────────────────────────────── */
+--cream:#FBF8F3;        /* page ground — warm parchment */
+--sand:#F3EEE4;         /* tinted block, card ground, hairline rules */
+--sand-deep:#E4DCC9;    /* divider inside a sand block */
+--brass:#9D8B5E;        /* accent: eyebrows, rules, marks */
+--brass-deep:#7A6A45;   /* brass darkened enough to sit on a tint */
+--terracotta:#B85540;   /* action: links, emphasis, primary buttons */
+--brown:#241C10;        /* primary ink */
+--brown-mid:#6F6349;    /* secondary ink — body copy. Brass's hue, darkened. */
+--brown-light:#8A7F63;  /* tertiary ink — labels and meta only, never running copy */
+
+/* ── Semantic surfaces ──────────────────────────────── */
+--bg:var(--cream);
+--surface:#FFFFFF;
+--surface-2:var(--sand);
+--surface-tinted:var(--sand);
+--surface-page:var(--cream);
+--surface-card:#FFFFFF;
+--surface-sunken:var(--sand);
+--border:var(--sand);
+--border-strong:var(--sand-deep);
+--border-default:var(--sand);
+--border-active:var(--terracotta);
+
+/* ── Semantic ink ───────────────────────────────────── */
+--text:var(--brown);
+--text-muted:var(--brown-mid);
+--text-faint:var(--brown-light);
+--text-body:var(--brown-mid);
+--text-secondary:var(--brown-mid);
+--text-label:var(--brown-light);
+--text-hint:var(--brown-mid);
+
+/* ── Action ─────────────────────────────────────────── */
+--accent:var(--brass);
+--accent-strong:var(--terracotta);
+--accent-soft:var(--sand);
+--action-primary-bg:var(--terracotta);
+--action-primary-fg:var(--cream);
+--link:var(--terracotta);
+
+/* ── Status (Studio only) ───────────────────────────────
+   Re-cut against the cream ground: each ink clears 4.5:1 on its own
+   soft field, and the hues sit inside the brand's warm range. */
+--good:#4A6B3D;
+--good-soft:#E4EFE1;
+--warn:#84692D;
+--warn-soft:#F6EFDB;
+--danger:var(--terracotta);
+--danger-soft:#F5E4E1;
+
+--scrim:rgba(36,28,16,0.45);
+--overlay-chip:rgba(36,28,16,0.62);
+}
+:root[data-theme="dark"]{
+--cream:#191108;
+--sand:#2A1E11;
+--sand-deep:#3A2A18;
+--brown:#F6ECDC;
+--brown-mid:#CFB393;
+--brown-light:#A98C69;
+--brass:#C9B583;
+--terracotta:#D97A62;
+--surface:#221809;
+--surface-2:var(--sand);
+--good:#8FAE78;
+--good-soft:#25301E;
+--warn-soft:#33240F;
+--danger-soft:#37201A;
+--action-primary-fg:#191108;
+}

@@ -1,0 +1,4 @@
+/* The exact Google Fonts request clubluce.com makes, plus Newsreader, which
+   Club Luce | Studio still loads for its serif numerals and long notes.
+   No font binaries exist in either repo; all four are Google-hosted. */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=Syne:wght@700&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap");
