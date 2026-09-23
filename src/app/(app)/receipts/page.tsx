@@ -14,7 +14,6 @@ export default async function ReceiptsPage({
   if (!data.houses.length) {
     return (
       <div className="empty-state">
-        <div className="big-emoji">🧾</div>
         Add a house first — Receipts are tracked per house.
       </div>
     );

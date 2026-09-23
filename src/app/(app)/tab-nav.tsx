@@ -6,11 +6,11 @@ import { LogoutButton } from "./logout-button";
 
 const TABS = [
   { href: "/houses", label: "Houses" },
-  { href: "/inbox", label: "Inbox" },
   { href: "/horizon", label: "Projects" },
   { href: "/receipts", label: "Receipts" },
   { href: "/lookbook", label: "Lookbook" },
   { href: "/overview", label: "Overview" },
+  { href: "/furniture", label: "Furniture" },
 ];
 
 export function TabNav() {

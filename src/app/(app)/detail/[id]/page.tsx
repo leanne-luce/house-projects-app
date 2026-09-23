@@ -17,7 +17,6 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       materialItems={data.materialItems}
       lineItems={data.lineItems}
       checklistItems={data.checklistItems}
-      filedInbox={data.filedInbox}
       boardImages={data.boardImages}
       paletteSwatches={data.paletteSwatches}
       progressPhotos={data.progressPhotos}

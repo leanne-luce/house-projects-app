@@ -2,6 +2,7 @@
 
 import { useRef, useTransition } from "react";
 import { addSwatch, updateSwatch, deleteSwatch } from "@/lib/actions";
+import { Panel } from "@/components/panel";
 import type { paletteSwatches as paletteSwatchesTable } from "@/db/schema";
 
 type Swatch = typeof paletteSwatchesTable.$inferSelect;
@@ -12,8 +13,7 @@ export function PalettePanel({ detailId, swatches }: { detailId: string; swatche
   const labelRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="panel-card">
-      <h4>🖌️ Color palette</h4>
+    <Panel title="Color palette">
       <div className="swatch-row">
         {swatches.length ? (
           swatches.map((s) => (
@@ -54,6 +54,6 @@ export function PalettePanel({ detailId, swatches }: { detailId: string; swatche
           Add
         </button>
       </div>
-    </div>
+    </Panel>
   );
 }

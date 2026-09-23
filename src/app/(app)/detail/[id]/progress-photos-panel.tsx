@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { compressImage } from "@/lib/compress-image";
 import { addProgressPhoto, deleteProgressPhoto } from "@/lib/actions";
 import { PhotoPickerButton } from "@/components/photo-picker-button";
+import { Panel } from "@/components/panel";
 import type { progressPhotos as progressPhotosTable } from "@/db/schema";
 
 type ProgressPhoto = typeof progressPhotosTable.$inferSelect;
@@ -12,18 +14,19 @@ const PHASES = ["before", "during", "after"] as const;
 
 export function ProgressPhotosPanel({
   detailId,
+  houseId,
   photos,
   contentTypeByAssetId,
 }: {
   detailId: string;
+  houseId: string;
   photos: ProgressPhoto[];
   contentTypeByAssetId: Record<string, string | null>;
 }) {
   const [, startTransition] = useTransition();
 
   return (
-    <div className="panel-card span2">
-      <h4>📸 Progress photos</h4>
+    <Panel title="Progress photos" span2>
       <div className="progress-cols">
         {PHASES.map((phase) => (
           <PhaseColumn
@@ -36,7 +39,14 @@ export function ProgressPhotosPanel({
           />
         ))}
       </div>
-    </div>
+      {photos.length ? (
+        <div style={{ marginTop: "0.9rem", paddingTop: "0.8rem", borderTop: "1px solid var(--border)" }}>
+          <Link href={`/lookbook?house=${houseId}`} className="link-btn">
+            See it in the lookbook →
+          </Link>
+        </div>
+      ) : null}
+    </Panel>
   );
 }
 

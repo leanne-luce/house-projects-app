@@ -4,7 +4,7 @@ import { jwtVerify } from "jose";
 const COOKIE_NAME = "house_hub_session";
 
 // Public paths that don't require a session. Everything else in the app
-// (houses/inbox/horizon/receipts/overview/detail pages, and all mutation
+// (houses/horizon/receipts/overview/detail pages, and all mutation
 // server actions reached through them) sits behind the passphrase gate.
 const PUBLIC_PATHS = ["/login"];
 

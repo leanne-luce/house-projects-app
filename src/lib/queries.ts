@@ -10,15 +10,18 @@ import {
   materialItems,
   lineItems,
   checklistItems,
-  inboxItems,
   boardImages,
+  boardImageDetails,
+  boardImageRooms,
   paletteSwatches,
   progressPhotos,
+  progressPhotoDetails,
   receipts,
   receiptLineItems,
   assets,
 } from "@/db/schema";
 import { asc, desc } from "drizzle-orm";
+import { photosForDetail, inspirationForDetail } from "./derived";
 
 export async function getHousesTreeData() {
   const [housesRows, roomsRows, detailsRows, materialsRows, lineItemsRows] = await Promise.all([
@@ -46,10 +49,11 @@ export async function getDetailPageData(detailId: string) {
     materials,
     lines,
     checklist,
-    filedInbox,
     allBoardImages,
+    allBoardImageDetailLinks,
     allSwatches,
     allProgressPhotos,
+    allProgressPhotoLinks,
     allReceiptLineItems,
     allReceipts,
     allAssets,
@@ -61,10 +65,11 @@ export async function getDetailPageData(detailId: string) {
     db.select().from(materialItems),
     db.select().from(lineItems),
     db.select().from(checklistItems),
-    db.select().from(inboxItems),
     db.select().from(boardImages).orderBy(asc(boardImages.createdAt)),
+    db.select().from(boardImageDetails),
     db.select().from(paletteSwatches).orderBy(asc(paletteSwatches.createdAt)),
     db.select().from(progressPhotos).orderBy(asc(progressPhotos.createdAt)),
+    db.select().from(progressPhotoDetails),
     db.select().from(receiptLineItems),
     db.select().from(receipts),
     db.select().from(assets),
@@ -78,35 +83,15 @@ export async function getDetailPageData(detailId: string) {
     materialItems: materials.filter((m) => m.detailId === detailId),
     lineItems: lines.filter((l) => l.detailId === detailId),
     checklistItems: checklist.filter((c) => c.detailId === detailId),
-    filedInbox: filedInbox.filter((i) => i.filedTo === detailId),
     allDetails: detailRows,
-    boardImages: allBoardImages.filter((b) => b.detailId === detailId),
+    boardImages: inspirationForDetail(allBoardImages, allBoardImageDetailLinks, detailId),
     paletteSwatches: allSwatches.filter((s) => s.detailId === detailId),
-    progressPhotos: allProgressPhotos.filter((p) => p.detailId === detailId),
+    progressPhotos: photosForDetail(allProgressPhotos, allProgressPhotoLinks, detailId),
     pendingReceiptItems: allReceiptLineItems.filter((i) => i.status === "pending"),
     receiptDates: Object.fromEntries(
       allReceipts.map((r) => [r.id, r.uploadedAt ? r.uploadedAt.toISOString() : null])
     ),
     contentTypeByAssetId: Object.fromEntries(allAssets.map((a) => [a.id, a.contentType])),
-  };
-}
-
-export async function getInboxTabData() {
-  const [items, detailsRows, housesRows, roomsRows, assetRows] = await Promise.all([
-    db.select().from(inboxItems),
-    db.select().from(details).orderBy(asc(details.createdAt)),
-    db.select().from(houses).orderBy(asc(houses.createdAt)),
-    db.select().from(rooms).orderBy(asc(rooms.createdAt)),
-    db.select().from(assets),
-  ]);
-  return {
-    unfiled: items
-      .filter((i) => !i.filedTo)
-      .sort((a, b) => (b.createdAt?.toISOString() ?? "").localeCompare(a.createdAt?.toISOString() ?? "")),
-    details: detailsRows,
-    houses: housesRows,
-    rooms: roomsRows,
-    contentTypeByAssetId: Object.fromEntries(assetRows.map((a) => [a.id, a.contentType])),
   };
 }
 
@@ -133,12 +118,25 @@ export async function getOverviewData() {
 }
 
 export async function getLookBookData() {
-  const [housesRows, roomsRows, detailsRows, photoRows, boardImageRows, assetRows] = await Promise.all([
+  const [
+    housesRows,
+    roomsRows,
+    detailsRows,
+    photoRows,
+    photoLinkRows,
+    boardImageRows,
+    boardImageDetailRows,
+    boardImageRoomRows,
+    assetRows,
+  ] = await Promise.all([
     db.select().from(houses).orderBy(asc(houses.createdAt)),
     db.select().from(rooms).orderBy(asc(rooms.createdAt)),
     db.select().from(details).orderBy(asc(details.createdAt)),
     db.select().from(progressPhotos).orderBy(asc(progressPhotos.createdAt)),
+    db.select().from(progressPhotoDetails),
     db.select().from(boardImages).orderBy(asc(boardImages.createdAt)),
+    db.select().from(boardImageDetails),
+    db.select().from(boardImageRooms),
     db.select().from(assets),
   ]);
   return {
@@ -146,7 +144,49 @@ export async function getLookBookData() {
     rooms: roomsRows,
     details: detailsRows,
     progressPhotos: photoRows,
+    progressPhotoDetails: photoLinkRows,
     boardImages: boardImageRows,
+    boardImageDetails: boardImageDetailRows,
+    boardImageRooms: boardImageRoomRows,
+    contentTypeByAssetId: Object.fromEntries(assetRows.map((a) => [a.id, a.contentType])),
+  };
+}
+
+export async function getFurnitureData() {
+  const [
+    housesRows,
+    roomsRows,
+    allDetails,
+    materialsRows,
+    lineItemsRows,
+    photoRows,
+    photoLinkRows,
+    boardImageRows,
+    boardImageDetailRows,
+    assetRows,
+  ] = await Promise.all([
+    db.select().from(houses).orderBy(asc(houses.createdAt)),
+    db.select().from(rooms).orderBy(asc(rooms.createdAt)),
+    db.select().from(details).orderBy(asc(details.createdAt)),
+    db.select().from(materialItems),
+    db.select().from(lineItems),
+    db.select().from(progressPhotos).orderBy(asc(progressPhotos.createdAt)),
+    db.select().from(progressPhotoDetails),
+    db.select().from(boardImages).orderBy(asc(boardImages.createdAt)),
+    db.select().from(boardImageDetails),
+    db.select().from(assets),
+  ]);
+  const furnitureDetails = allDetails.filter((d) => d.isFurniture);
+  return {
+    houses: housesRows,
+    rooms: roomsRows,
+    details: furnitureDetails,
+    materialItems: materialsRows,
+    lineItems: lineItemsRows,
+    progressPhotos: photoRows,
+    progressPhotoDetails: photoLinkRows,
+    boardImages: boardImageRows,
+    boardImageDetails: boardImageDetailRows,
     contentTypeByAssetId: Object.fromEntries(assetRows.map((a) => [a.id, a.contentType])),
   };
 }

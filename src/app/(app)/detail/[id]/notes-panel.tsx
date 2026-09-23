@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { updateDetail } from "@/lib/actions";
+import { Panel } from "@/components/panel";
 
 const URL_PATTERN = /https?:\/\/[^\s<>"')\]]+/g;
 
@@ -17,8 +18,7 @@ export function NotesPanel({ detailId, notes }: { detailId: string; notes: strin
   const links = extractLinks(notes);
 
   return (
-    <div className="panel-card span2">
-      <h4>🗒️ Notes</h4>
+    <Panel title="Notes">
       <textarea
         rows={5}
         defaultValue={notes || ""}
@@ -42,6 +42,6 @@ export function NotesPanel({ detailId, notes }: { detailId: string; notes: strin
           ))}
         </div>
       ) : null}
-    </div>
+    </Panel>
   );
 }

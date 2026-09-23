@@ -43,6 +43,11 @@ export const houses = pgTable("houses", {
   // to buy, added on request so the app can show an "all-in" figure
   // (purchase price + project spend), not just renovation spend on its own.
   purchasePrice: numeric("purchase_price"),
+  // DEVIATION (addition, not in build brief section 6): cash actually put
+  // down at purchase, added on request so the app can show a "cash in"
+  // figure (down payment + project spend) alongside "all-in" — the money
+  // actually out of pocket, as distinct from the house's full value.
+  downPayment: numeric("down_payment"),
   createdAt: createdAt(),
 });
 
@@ -82,6 +87,18 @@ export const details = pgTable(
     // scratchpad is for) — links, stray context, reminders. Added on
     // request.
     notes: text("notes"),
+    // DEVIATION (addition, not in build brief section 6): tags a detail as
+    // furniture so its spend can be pulled out of the normal budget totals
+    // and shown separately (a couch isn't "renovation spend" the same way
+    // tile or labor is), and so it can be browsed in its own catalog-style
+    // gallery. Added on request.
+    isFurniture: boolean("is_furniture").notNull().default(false),
+    // DEVIATION (addition, per the "planning layout" design pass): a short
+    // freeform target-date string shown inline in the hero meta line
+    // ("Target 14 Nov") — distinct from the timeframe granularity/value
+    // pair, which buckets a detail into Horizon groups rather than naming
+    // one specific date to hit.
+    targetDate: text("target_date"),
     createdAt: createdAt(),
   },
   (table) => [
@@ -100,6 +117,14 @@ export const checklistItems = pgTable("checklist_items", {
     .references(() => details.id),
   description: text("description").notNull(),
   done: boolean("done").notNull().default(false),
+  // DEVIATION (addition, per the "planning layout" design pass): a short
+  // freeform display string for the step's date/status — "done 12 Sep",
+  // "by 20 Oct", "wk of 10 Nov". Free text rather than a real date so any
+  // of those phrasings fits without format-specific rendering logic.
+  dueDate: text("due_date"),
+  // A short dependency/context sub-line ("Blocks 04 and 05", "Two weeks'
+  // notice — waits on 03").
+  note: text("note"),
   createdAt: createdAt(),
 });
 
@@ -166,9 +191,16 @@ export const boardImages = pgTable(
   "board_images",
   {
     id: id(),
-    detailId: text("detail_id")
-      .notNull()
-      .references(() => details.id),
+    // DEVIATION (change, on request): no longer the only way to place an
+    // image — kept only for backward-compatible provenance on rows created
+    // before house-level inspiration existed. Every new row's real
+    // house/room/detail associations live in the two join tables below,
+    // even one added straight from a Detail's own panel.
+    detailId: text("detail_id").references(() => details.id),
+    // Always populated on new rows (resolved from whichever of house/room/
+    // detail the upload started from) so a house's Lookbook page can list
+    // every inspiration image it owns, assigned or not.
+    houseId: text("house_id").references(() => houses.id),
     boardType: text("board_type").notNull(),
     assetId: text("asset_id").references(() => assets.id),
     sourceUrl: text("source_url"),
@@ -177,6 +209,33 @@ export const boardImages = pgTable(
   },
   (table) => [check("board_type_check", sql`${table.boardType} in ('mood','reference')`)]
 );
+
+// Many-to-many, same rationale as progressPhotoDetails: one inspiration
+// photo can cover more than one detail (a headboard and a wall mural in the
+// same shot, relevant to two different details).
+export const boardImageDetails = pgTable("board_image_details", {
+  id: id(),
+  boardImageId: text("board_image_id")
+    .notNull()
+    .references(() => boardImages.id),
+  detailId: text("detail_id")
+    .notNull()
+    .references(() => details.id),
+  createdAt: createdAt(),
+});
+
+// Lets an inspiration image be tagged to a room generally, without picking
+// one specific detail in it yet.
+export const boardImageRooms = pgTable("board_image_rooms", {
+  id: id(),
+  boardImageId: text("board_image_id")
+    .notNull()
+    .references(() => boardImages.id),
+  roomId: text("room_id")
+    .notNull()
+    .references(() => rooms.id),
+  createdAt: createdAt(),
+});
 
 export const paletteSwatches = pgTable("palette_swatches", {
   id: id(),
@@ -194,9 +253,18 @@ export const progressPhotos = pgTable(
   "progress_photos",
   {
     id: id(),
-    detailId: text("detail_id")
-      .notNull()
-      .references(() => details.id),
+    // DEVIATION (change, on request): kept only as inert provenance ("the
+    // detail this was originally uploaded through") — every read now goes
+    // through progressPhotoDetails below, which is what lets a photo be
+    // assigned to more than one detail. Nullable because a photo can now
+    // also be uploaded straight at the room level, with no detail at all.
+    detailId: text("detail_id").references(() => details.id),
+    // A room-level upload sets this directly; a detail-level upload leaves
+    // it null and is found via progressPhotoDetails -> details.roomId
+    // instead — so moving a detail to a different room (see the Move panel)
+    // carries its photos to the new room's gallery for free, with nothing
+    // to update here.
+    roomId: text("room_id").references(() => rooms.id),
     phase: text("phase").notNull(),
     assetId: text("asset_id")
       .notNull()
@@ -206,6 +274,21 @@ export const progressPhotos = pgTable(
   },
   (table) => [check("phase_check", sql`${table.phase} in ('before','during','after')`)]
 );
+
+// Many-to-many: one photo (e.g. a wide room shot) can be relevant to
+// several details ("the headboard in this photo" + "the wall mural in this
+// photo"), and a detail can obviously have several photos. The first join
+// table in this schema — see progressPhotos' comment above for why.
+export const progressPhotoDetails = pgTable("progress_photo_details", {
+  id: id(),
+  progressPhotoId: text("progress_photo_id")
+    .notNull()
+    .references(() => progressPhotos.id),
+  detailId: text("detail_id")
+    .notNull()
+    .references(() => details.id),
+  createdAt: createdAt(),
+});
 
 export const RECEIPT_STATUS_VALUES = ["new", "processing", "logged"] as const;
 

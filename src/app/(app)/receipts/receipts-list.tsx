@@ -53,7 +53,6 @@ export function ReceiptsList({
       <UploadForm houseId={houseId} />
       {!receipts.length ? (
         <div className="empty-state">
-          <div className="big-emoji">🧾</div>
           No receipts yet for this house.
         </div>
       ) : (
@@ -111,7 +110,7 @@ function UploadForm({ houseId }: { houseId: string }) {
           disabled={uploading}
           className="secondary"
           accept="image/*,application/pdf"
-          label={pendingFile ? `📎 ${pendingFile.name.slice(0, 24)}` : "📎 Choose receipt (photo or PDF)"}
+          label={pendingFile ? pendingFile.name.slice(0, 24) : "Choose receipt (photo or PDF)"}
         />
         <button className="primary" onClick={() => handleUpload(false)} disabled={uploading || !pendingFile}>
           {uploading ? "Scanning…" : "Upload & scan"}
@@ -165,7 +164,7 @@ function ReceiptCard({
             onClick={(e) => e.stopPropagation()}
             title="Open PDF"
           >
-            📄
+            PDF
           </a>
         ) : (
           <img src={`/asset/${receipt.assetId}`} className="receipt-thumb-box" alt="" />
@@ -175,7 +174,7 @@ function ReceiptCard({
             <input
               defaultValue={receipt.vendor || ""}
               placeholder="Store / vendor"
-              style={{ border: "none", background: "transparent", padding: "0.1rem 0", fontWeight: 600, fontSize: "0.85rem", flex: 1 }}
+              style={{ border: "none", background: "transparent", padding: "0.1rem 0", fontFamily: "var(--font-display)", fontWeight: 400, fontSize: "1.25rem", letterSpacing: "-0.01em", flex: 1 }}
               onClick={(e) => e.stopPropagation()}
               onBlur={(e) => {
                 if (e.target.value !== (receipt.vendor || "")) {

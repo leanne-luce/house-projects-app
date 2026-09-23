@@ -3,13 +3,16 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
-import { money, num, fmtTimeframe, budgetDeltaLabel } from "@/lib/format";
+import { FinancialSummaryModal } from "./financial-summary-modal";
+import { money, fmtTimeframe, budgetDeltaLabel } from "@/lib/format";
 import {
   detailsDirectOnHouse,
   detailsForRoom,
   houseRollup,
   roomRollup,
   detailsRollup,
+  nonFurniture,
+  furnitureRollup,
   estimatedSpendFor,
   actualCost,
 } from "@/lib/derived";
@@ -41,6 +44,7 @@ type ModalState =
   | { type: "add-house" }
   | { type: "add-room"; houseId: string }
   | { type: "add-detail"; houseId: string; roomId: string | null }
+  | { type: "financial"; houseId: string }
   | null;
 
 export function HouseTree({
@@ -89,7 +93,6 @@ export function HouseTree({
     return (
       <>
         <div className="empty-state">
-          <div className="big-emoji">🏡</div>
           No houses yet.
           <br />
           Add your first one to start breaking it down into rooms and details.
@@ -99,7 +102,7 @@ export function HouseTree({
             + Add house
           </button>
         </div>
-        {modal ? <AddModal
+        {modal && modal.type !== "financial" ? <AddModal
             modal={modal}
             onClose={() => setModal(null)}
             houses={houses}
@@ -116,6 +119,7 @@ export function HouseTree({
         const rollup = houseRollup(details, materialItems, lineItems, h.id);
         const houseRooms = rooms.filter((r) => r.houseId === h.id);
         const directDetails = detailsDirectOnHouse(details, h.id);
+        const delta = budgetDeltaLabel(rollup.actual, rollup.rough);
 
         return (
           <div className="card house-card" key={h.id}>
@@ -133,76 +137,40 @@ export function HouseTree({
                       }
                     }}
                   />
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <input
-                      className="house-address-input"
-                      defaultValue={h.address || ""}
-                      placeholder="Address (optional)"
-                      style={{ flex: 1, minWidth: 0, textOverflow: "ellipsis" }}
-                      onClick={(e) => e.stopPropagation()}
-                      onBlur={(e) => {
-                        if (e.target.value !== (h.address || "")) {
-                          startTransition(() => updateHouse(h.id, { address: e.target.value || null }));
-                        }
-                      }}
-                    />
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.15rem",
-                        maxWidth: "8.5rem",
-                        flexShrink: 0,
-                        borderLeft: "1px solid var(--border)",
-                        paddingLeft: "0.5rem",
-                      }}
-                    >
-                      <span style={{ color: "var(--text-faint)", fontSize: "0.78rem" }}>$</span>
-                      <input
-                        className="house-address-input"
-                        type="number"
-                        min={0}
-                        step="any"
-                        defaultValue={h.purchasePrice || ""}
-                        placeholder="Purchase price"
-                        onClick={(e) => e.stopPropagation()}
-                        onBlur={(e) => {
-                          if (e.target.value !== (h.purchasePrice || "")) {
-                            startTransition(() =>
-                              updateHouse(h.id, { purchasePrice: e.target.value === "" ? null : e.target.value })
-                            );
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
+                  <input
+                    className="house-address-input"
+                    defaultValue={h.address || ""}
+                    placeholder="Address (optional)"
+                    style={{ width: "100%", textOverflow: "ellipsis" }}
+                    onClick={(e) => e.stopPropagation()}
+                    onBlur={(e) => {
+                      if (e.target.value !== (h.address || "")) {
+                        startTransition(() => updateHouse(h.id, { address: e.target.value || null }));
+                      }
+                    }}
+                  />
                 </div>
               </div>
               <div className="house-stats">
                 {rollup.count} detail{rollup.count === 1 ? "" : "s"}
                 <br />
                 {money(rollup.actual)} spent{rollup.rough ? ` / ${money(rollup.rough)} planned` : ""}
-                {(() => {
-                  const delta = budgetDeltaLabel(rollup.actual, rollup.rough);
-                  return delta ? (
-                    <span style={{ color: delta.over ? "var(--danger)" : "var(--text-muted)", fontWeight: 700 }}>
-                      {" "}
-                      · {delta.text}
-                    </span>
-                  ) : null;
-                })()}
-                {h.purchasePrice ? (
-                  <>
-                    <br />
-                    <span style={{ color: "var(--accent-strong)" }}>
-                      All-in: {money(num(h.purchasePrice) + rollup.actual)}
-                    </span>
-                    <br />
-                    <span style={{ color: "var(--text-muted)" }}>
-                      All-in if fully spent as planned: {money(num(h.purchasePrice) + rollup.rough)}
-                    </span>
-                  </>
+                {delta ? (
+                  <span style={{ color: delta.over ? "var(--danger)" : "var(--text-muted)", fontWeight: 700 }}>
+                    {" "}
+                    · {delta.text}
+                  </span>
                 ) : null}
+                <br />
+                <button
+                  className="link-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setModal({ type: "financial", houseId: h.id });
+                  }}
+                >
+                  Financial summary
+                </button>
               </div>
             </div>
 
@@ -267,7 +235,7 @@ export function HouseTree({
 
                   <RoomCard
                     title={<span className="room-name">{houseRooms.length ? "Not in a specific room" : "Details"}</span>}
-                    rollup={detailsRollup(directDetails, materialItems, lineItems)}
+                    rollup={detailsRollup(nonFurniture(directDetails), materialItems, lineItems)}
                     open={expandedRooms.has(`${h.id}:none`)}
                     onToggle={() => toggleRoom(`${h.id}:none`)}
                   >
@@ -330,17 +298,31 @@ export function HouseTree({
         </button>
       </div>
 
-      {modal ? <AddModal
+      {modal ? (
+        modal.type === "financial" ? (
+          (() => {
+            const house = houses.find((h) => h.id === modal.houseId);
+            return house ? (
+              <FinancialSummaryModal
+                house={house}
+                rollup={houseRollup(details, materialItems, lineItems, house.id)}
+                furniture={furnitureRollup(details, materialItems, lineItems, house.id)}
+                onClose={() => setModal(null)}
+              />
+            ) : null;
+          })()
+        ) : (
+          <AddModal
             modal={modal}
             onClose={() => setModal(null)}
             houses={houses}
             onHouseAdded={(h) => setExpanded((prev) => new Set(prev).add(h.id))}
-          /> : null}
+          />
+        )
+      ) : null}
     </>
   );
 }
-
-const STATUS_ORDER = ["not_started", "in_progress", "on_hold", "done"] as const;
 
 function RoomCard({
   title,
@@ -383,28 +365,12 @@ function RoomCard({
               </span>
             ) : null}
           </div>
-          {/* Always rendered (even with zero details, where it shows as a
-              plain --border-colored line) so every collapsed room card in a
-              row has the same head height, whether or not it has details. */}
-          <div className="room-status-bar">
-            {STATUS_ORDER.map((status) =>
-              rollup.counts[status] ? (
-                <div
-                  key={status}
-                  className={`room-status-seg ${status}`}
-                  style={{ flex: rollup.counts[status] }}
-                  title={`${rollup.counts[status]} ${STATUS_LABEL[status].toLowerCase()}`}
-                />
-              ) : null
-            )}
-          </div>
-          <div className="room-progress-row">
-            <div className="room-progress-track">
-              <div className="room-progress-fill" style={{ width: `${donePct}%` }} />
-            </div>
-            <span className="room-progress-pct">{donePct}%</span>
-          </div>
         </div>
+        <span
+          className={`status-pill ${donePct === 100 ? "status-done" : donePct === 0 ? "status-not_started" : "status-in_progress"}`}
+        >
+          {donePct}% done
+        </span>
         {onDelete ? (
           <button
             className="icon-btn"
@@ -463,7 +429,7 @@ function AddModal({
   houses,
   onHouseAdded,
 }: {
-  modal: NonNullable<ModalState>;
+  modal: Exclude<NonNullable<ModalState>, { type: "financial" }>;
   onClose: () => void;
   houses: House[];
   onHouseAdded: (house: House) => void;

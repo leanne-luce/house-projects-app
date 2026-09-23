@@ -20,12 +20,15 @@ import {
   inboxItems,
   assets,
   boardImages,
+  boardImageDetails,
+  boardImageRooms,
   paletteSwatches,
   progressPhotos,
+  progressPhotoDetails,
   receipts,
   receiptLineItems,
 } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { saveAsset, saveAssetBuffer, readAssetBuffer } from "./storage";
 import { runOcr, extractPdfText, parseReceiptLines } from "./ocr";
@@ -34,12 +37,66 @@ import crypto from "node:crypto";
 function revalidateEverything() {
   // Personal-scale app, cheap to over-invalidate rather than track exactly
   // which paths a given mutation could affect (a moved Detail touches two
-  // houses' rollups, a filed inbox item touches the inbox count badge, etc).
+  // houses' rollups, etc).
   revalidatePath("/houses");
-  revalidatePath("/inbox");
   revalidatePath("/horizon");
   revalidatePath("/overview");
+  revalidatePath("/lookbook");
+  revalidatePath("/receipts");
+  revalidatePath("/furniture");
   revalidatePath("/detail/[id]", "page");
+}
+
+// Deletes/detaches everything hanging off a Detail before the Detail row
+// itself is deleted. materialItems/lineItems/checklistItems have no other
+// consumer once the Detail is gone, so they're deleted outright; the FK
+// tables that could still matter elsewhere (a receipt line item's
+// assignment, an inbox item's filing) are nulled out instead of deleted, the
+// same "detach, don't destroy" pattern already used for `details.roomId` in
+// deleteRoom. Shared between deleteDetail and deleteHouse's per-detail loop
+// so the two never drift out of sync on what needs cleaning up.
+async function cleanupDetailChildren(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], detailId: string) {
+  await tx.delete(materialItems).where(eq(materialItems.detailId, detailId));
+  await tx.delete(lineItems).where(eq(lineItems.detailId, detailId));
+  await tx.delete(checklistItems).where(eq(checklistItems.detailId, detailId));
+  await tx.delete(paletteSwatches).where(eq(paletteSwatches.detailId, detailId));
+
+  // A photo "owned" by this detail (progressPhotos.detailId) may also be
+  // linked to OTHER details via progressPhotoDetails (that's the whole
+  // point of letting one photo cover several details) — every link row
+  // touching one of these photos has to go before the photo rows
+  // themselves can be deleted, not just the links for this detail.
+  const ownedPhotos = await tx
+    .select({ id: progressPhotos.id })
+    .from(progressPhotos)
+    .where(eq(progressPhotos.detailId, detailId));
+  if (ownedPhotos.length) {
+    await tx.delete(progressPhotoDetails).where(
+      inArray(
+        progressPhotoDetails.progressPhotoId,
+        ownedPhotos.map((p) => p.id)
+      )
+    );
+  }
+  // This detail's link to any OTHER photo it didn't own (e.g. a room-level
+  // or another detail's photo this one was also tagged onto) — the photo
+  // itself survives, it just loses this one assignment.
+  await tx.delete(progressPhotoDetails).where(eq(progressPhotoDetails.detailId, detailId));
+  await tx.delete(progressPhotos).where(eq(progressPhotos.detailId, detailId));
+
+  // Unlike progress photos, an inspiration image is house-owned, not
+  // detail-owned — deleting a detail just untags it (removing the join
+  // row), the image itself survives in the house's Lookbook bucket. Also
+  // clear the legacy provenance column on any row that still points here,
+  // since it carries a real FK.
+  await tx.delete(boardImageDetails).where(eq(boardImageDetails.detailId, detailId));
+  await tx.update(boardImages).set({ detailId: null }).where(eq(boardImages.detailId, detailId));
+
+  await tx
+    .update(receiptLineItems)
+    .set({ assignedDetailId: null })
+    .where(eq(receiptLineItems.assignedDetailId, detailId));
+  await tx.update(inboxItems).set({ filedTo: null }).where(eq(inboxItems.filedTo, detailId));
 }
 
 // ---------- Houses ----------
@@ -56,7 +113,7 @@ export async function addHouse(name: string, address: string) {
 
 export async function updateHouse(
   id: string,
-  patch: Partial<{ name: string; address: string | null; purchasePrice: string | null }>
+  patch: Partial<{ name: string; address: string | null; purchasePrice: string | null; downPayment: string | null }>
 ) {
   await db.update(houses).set(patch).where(eq(houses.id, id));
   revalidateEverything();
@@ -66,13 +123,30 @@ export async function deleteHouse(id: string) {
   await db.transaction(async (tx) => {
     const houseDetails = await tx.select().from(details).where(eq(details.houseId, id));
     for (const d of houseDetails) {
-      await tx.delete(materialItems).where(eq(materialItems.detailId, d.id));
-      await tx.delete(lineItems).where(eq(lineItems.detailId, d.id));
-      await tx.delete(checklistItems).where(eq(checklistItems.detailId, d.id));
-      await tx.update(inboxItems).set({ filedTo: null }).where(eq(inboxItems.filedTo, d.id));
+      await cleanupDetailChildren(tx, d.id);
       await tx.delete(details).where(eq(details.id, d.id));
     }
+    const houseRooms = await tx.select({ id: rooms.id }).from(rooms).where(eq(rooms.houseId, id));
+    if (houseRooms.length) {
+      await tx.delete(boardImageRooms).where(
+        inArray(
+          boardImageRooms.roomId,
+          houseRooms.map((r) => r.id)
+        )
+      );
+    }
     await tx.delete(rooms).where(eq(rooms.houseId, id));
+
+    // Any inspiration image this house owns — assigned or not — goes with
+    // it; every detail/room it could have been tagged to is already gone.
+    const houseImages = await tx.select({ id: boardImages.id }).from(boardImages).where(eq(boardImages.houseId, id));
+    if (houseImages.length) {
+      const imageIds = houseImages.map((img) => img.id);
+      await tx.delete(boardImageDetails).where(inArray(boardImageDetails.boardImageId, imageIds));
+      await tx.delete(boardImageRooms).where(inArray(boardImageRooms.boardImageId, imageIds));
+      await tx.delete(boardImages).where(eq(boardImages.houseId, id));
+    }
+
     await tx.delete(houses).where(eq(houses.id, id));
   });
   revalidateEverything();
@@ -94,6 +168,13 @@ export async function updateRoom(id: string, patch: Partial<{ name: string }>) {
 export async function deleteRoom(id: string) {
   await db.transaction(async (tx) => {
     await tx.update(details).set({ roomId: null }).where(eq(details.roomId, id));
+    // Same "promote, don't destroy" treatment for a room-level photo — it
+    // becomes unrouted rather than vanishing (it may still be linked to a
+    // detail directly, which is unaffected by this).
+    await tx.update(progressPhotos).set({ roomId: null }).where(eq(progressPhotos.roomId, id));
+    // Same for an inspiration image tagged to this room directly — the tag
+    // goes, the image survives at the house level.
+    await tx.delete(boardImageRooms).where(eq(boardImageRooms.roomId, id));
     await tx.delete(rooms).where(eq(rooms.id, id));
   });
   revalidateEverything();
@@ -124,6 +205,8 @@ export async function updateDetail(
     estimatedSpend: string | null;
     pinterestBoardUrl: string | null;
     notes: string | null;
+    isFurniture: boolean;
+    targetDate: string | null;
   }>
 ) {
   await db.update(details).set(patch).where(eq(details.id, id));
@@ -132,10 +215,7 @@ export async function updateDetail(
 
 export async function deleteDetail(id: string) {
   await db.transaction(async (tx) => {
-    await tx.delete(materialItems).where(eq(materialItems.detailId, id));
-    await tx.delete(lineItems).where(eq(lineItems.detailId, id));
-    await tx.delete(checklistItems).where(eq(checklistItems.detailId, id));
-    await tx.update(inboxItems).set({ filedTo: null }).where(eq(inboxItems.filedTo, id));
+    await cleanupDetailChildren(tx, id);
     await tx.delete(details).where(eq(details.id, id));
   });
   revalidateEverything();
@@ -154,7 +234,10 @@ export async function toggleChecklistItem(id: string, done: boolean) {
   revalidateEverything();
 }
 
-export async function updateChecklistItem(id: string, patch: Partial<{ description: string }>) {
+export async function updateChecklistItem(
+  id: string,
+  patch: Partial<{ description: string; dueDate: string | null; note: string | null }>
+) {
   await db.update(checklistItems).set(patch).where(eq(checklistItems.id, id));
   revalidateEverything();
 }
@@ -224,84 +307,6 @@ export async function deleteLineItem(id: string) {
   revalidateEverything();
 }
 
-// ---------- Inbox ----------
-
-export async function addInboxItem(formData: FormData) {
-  const text = String(formData.get("text") || "").trim();
-  const file = formData.get("file") as File | null;
-
-  let assetId: string | null = null;
-  if (file && file.size > 0) {
-    const saved = await saveAsset(file);
-    const [row] = await db.insert(assets).values(saved).returning();
-    assetId = row.id;
-  }
-  if (!text && !assetId) return;
-
-  await db.insert(inboxItems).values({
-    type: assetId ? "image" : "note",
-    text,
-    assetId,
-    source: "manual",
-  });
-  revalidateEverything();
-}
-
-export async function fileInboxItem(id: string, detailId: string) {
-  await db.update(inboxItems).set({ filedTo: detailId }).where(eq(inboxItems.id, id));
-  revalidateEverything();
-}
-
-export async function discardInboxItem(id: string) {
-  await db.delete(inboxItems).where(eq(inboxItems.id, id));
-  revalidateEverything();
-}
-
-// File an inbox item into a brand-new House/Room/Detail created on the spot —
-// the prototype's "+ or create a new detail for this" inline flow. Reuses
-// an existing house/room by name if one already matches (case-insensitive),
-// otherwise creates it, exactly like typing into the prototype's
-// `list="houseList"` datalist-backed input.
-export async function fileInboxItemToNew(
-  inboxItemId: string,
-  houseName: string,
-  roomName: string,
-  detailName: string
-) {
-  if (!houseName.trim() || !detailName.trim()) return;
-
-  await db.transaction(async (tx) => {
-    let house = (await tx.select().from(houses)).find(
-      (h) => h.name.toLowerCase() === houseName.trim().toLowerCase()
-    );
-    if (!house) {
-      [house] = await tx.insert(houses).values({ name: houseName.trim() }).returning();
-    }
-
-    let roomId: string | null = null;
-    if (roomName.trim()) {
-      const existingRoom = (await tx.select().from(rooms).where(eq(rooms.houseId, house.id))).find(
-        (r) => r.name.toLowerCase() === roomName.trim().toLowerCase()
-      );
-      if (existingRoom) {
-        roomId = existingRoom.id;
-      } else {
-        const [newRoom] = await tx.insert(rooms).values({ houseId: house.id, name: roomName.trim() }).returning();
-        roomId = newRoom.id;
-      }
-    }
-
-    const [detail] = await tx
-      .insert(details)
-      .values({ houseId: house.id, roomId, name: detailName.trim(), status: "not_started" })
-      .returning();
-
-    await tx.update(inboxItems).set({ filedTo: detail.id }).where(eq(inboxItems.id, inboxItemId));
-  });
-  revalidateEverything();
-}
-
-
 // ---------- Mood board / Reference collection (Phase 3) ----------
 // Mood board and Reference collection share this same image-collection
 // mechanic (upload or paste an image URL) but are kept as separate
@@ -309,8 +314,16 @@ export async function fileInboxItemToNew(
 // should this look like" vs. "how does this go together" — per the
 // brief's own reasoning (section 7).
 
+// Accepts whichever of detailId / roomId / houseId the caller has at upload
+// time — a detail's own panel passes detailId, a room's Lookbook section
+// passes roomId, and the house-level "inspiration to sort" uploader passes
+// houseId directly with neither. Every new row is house-owned (houseId
+// always resolved and stored) with the specific detail/room, if any,
+// recorded as a tag in the join tables rather than on the row itself.
 export async function addBoardImage(formData: FormData) {
-  const detailId = String(formData.get("detailId") || "");
+  const detailId = String(formData.get("detailId") || "") || null;
+  const roomId = String(formData.get("roomId") || "") || null;
+  let houseId = String(formData.get("houseId") || "") || null;
   const boardType = String(formData.get("boardType") || "");
   const sourceUrl = String(formData.get("sourceUrl") || "").trim();
   const notes = String(formData.get("notes") || "").trim();
@@ -324,7 +337,61 @@ export async function addBoardImage(formData: FormData) {
   }
   if (!assetId && !sourceUrl) return;
 
-  await db.insert(boardImages).values({ detailId, boardType, assetId, sourceUrl: sourceUrl || null, notes });
+  if (!houseId && detailId) {
+    const [detail] = await db.select().from(details).where(eq(details.id, detailId)).limit(1);
+    houseId = detail?.houseId ?? null;
+  }
+  if (!houseId && roomId) {
+    const [room] = await db.select().from(rooms).where(eq(rooms.id, roomId)).limit(1);
+    houseId = room?.houseId ?? null;
+  }
+  if (!houseId) return;
+
+  const [image] = await db
+    .insert(boardImages)
+    .values({ houseId, boardType, assetId, sourceUrl: sourceUrl || null, notes })
+    .returning();
+  if (detailId) {
+    await db.insert(boardImageDetails).values({ boardImageId: image.id, detailId });
+  } else if (roomId) {
+    await db.insert(boardImageRooms).values({ boardImageId: image.id, roomId });
+  }
+  revalidateEverything();
+}
+
+export async function assignBoardImageToDetail(boardImageId: string, detailId: string) {
+  const [existing] = await db
+    .select()
+    .from(boardImageDetails)
+    .where(and(eq(boardImageDetails.boardImageId, boardImageId), eq(boardImageDetails.detailId, detailId)))
+    .limit(1);
+  if (existing) return;
+  await db.insert(boardImageDetails).values({ boardImageId, detailId });
+  revalidateEverything();
+}
+
+export async function unassignBoardImageFromDetail(boardImageId: string, detailId: string) {
+  await db
+    .delete(boardImageDetails)
+    .where(and(eq(boardImageDetails.boardImageId, boardImageId), eq(boardImageDetails.detailId, detailId)));
+  revalidateEverything();
+}
+
+export async function assignBoardImageToRoom(boardImageId: string, roomId: string) {
+  const [existing] = await db
+    .select()
+    .from(boardImageRooms)
+    .where(and(eq(boardImageRooms.boardImageId, boardImageId), eq(boardImageRooms.roomId, roomId)))
+    .limit(1);
+  if (existing) return;
+  await db.insert(boardImageRooms).values({ boardImageId, roomId });
+  revalidateEverything();
+}
+
+export async function unassignBoardImageFromRoom(boardImageId: string, roomId: string) {
+  await db
+    .delete(boardImageRooms)
+    .where(and(eq(boardImageRooms.boardImageId, boardImageId), eq(boardImageRooms.roomId, roomId)));
   revalidateEverything();
 }
 
@@ -337,6 +404,8 @@ export async function updateBoardImage(
 }
 
 export async function deleteBoardImage(id: string) {
+  await db.delete(boardImageDetails).where(eq(boardImageDetails.boardImageId, id));
+  await db.delete(boardImageRooms).where(eq(boardImageRooms.boardImageId, id));
   await db.delete(boardImages).where(eq(boardImages.id, id));
   revalidateEverything();
 }
@@ -360,20 +429,54 @@ export async function deleteSwatch(id: string) {
 
 // ---------- Progress photos (Phase 3) ----------
 
+// A detail-scoped upload (detailId given, the existing per-detail panel's
+// flow) keeps a direct provenance link on progressPhotos.detailId AND gets
+// one progressPhotoDetails row — the room-level gallery for that detail's
+// room then finds it automatically via photosForRoom, no extra write. A
+// room-scoped upload (roomId given, no detailId — the new path) just sets
+// roomId and creates no link row yet, landing in that room's gallery with
+// no detail attached until someone assigns it.
 export async function addProgressPhoto(formData: FormData) {
-  const detailId = String(formData.get("detailId") || "");
+  const detailId = String(formData.get("detailId") || "") || null;
+  const roomId = String(formData.get("roomId") || "") || null;
   const phase = String(formData.get("phase") || "");
   const notes = String(formData.get("notes") || "").trim();
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return;
+  if (!detailId && !roomId) return;
 
   const saved = await saveAsset(file);
   const [assetRow] = await db.insert(assets).values(saved).returning();
-  await db.insert(progressPhotos).values({ detailId, phase, assetId: assetRow.id, notes });
+  const [photo] = await db
+    .insert(progressPhotos)
+    .values({ detailId, roomId: detailId ? null : roomId, phase, assetId: assetRow.id, notes })
+    .returning();
+  if (detailId) {
+    await db.insert(progressPhotoDetails).values({ progressPhotoId: photo.id, detailId });
+  }
+  revalidateEverything();
+}
+
+export async function assignProgressPhotoToDetail(photoId: string, detailId: string) {
+  const [existing] = await db
+    .select()
+    .from(progressPhotoDetails)
+    .where(and(eq(progressPhotoDetails.progressPhotoId, photoId), eq(progressPhotoDetails.detailId, detailId)))
+    .limit(1);
+  if (existing) return;
+  await db.insert(progressPhotoDetails).values({ progressPhotoId: photoId, detailId });
+  revalidateEverything();
+}
+
+export async function unassignProgressPhotoFromDetail(photoId: string, detailId: string) {
+  await db
+    .delete(progressPhotoDetails)
+    .where(and(eq(progressPhotoDetails.progressPhotoId, photoId), eq(progressPhotoDetails.detailId, detailId)));
   revalidateEverything();
 }
 
 export async function deleteProgressPhoto(id: string) {
+  await db.delete(progressPhotoDetails).where(eq(progressPhotoDetails.progressPhotoId, id));
   await db.delete(progressPhotos).where(eq(progressPhotos.id, id));
   revalidateEverything();
 }

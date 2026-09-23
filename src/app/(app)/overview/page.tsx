@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getOverviewData } from "@/lib/queries";
-import { actualCost, estimatedSpendFor, hasRealBudget, roomPath } from "@/lib/derived";
+import { actualCost, estimatedSpendFor, hasRealBudget, nonFurniture, furnitureRollup, roomPath } from "@/lib/derived";
 import { money, num, fmtTimeframe } from "@/lib/format";
 import { HouseSwitcher } from "@/components/house-switcher";
 
@@ -24,7 +24,6 @@ export default async function OverviewPage({
   if (!houses.length) {
     return (
       <div className="empty-state">
-        <div className="big-emoji">📊</div>
         Add a house first — Overview shows spend, budget, and sourcing per house.
       </div>
     );
@@ -34,7 +33,8 @@ export default async function OverviewPage({
   const activeHouseId = houses.some((h) => h.id === houseParam) ? houseParam! : houses[0].id;
   const activeHouse = houses.find((h) => h.id === activeHouseId)!;
   const rooms = allRooms.filter((r) => r.houseId === activeHouseId);
-  const details = allDetails.filter((d) => d.houseId === activeHouseId);
+  const details = nonFurniture(allDetails.filter((d) => d.houseId === activeHouseId));
+  const furniture = furnitureRollup(allDetails, materialItems, lineItems, activeHouseId);
 
   const switcher = <HouseSwitcher houses={houses} activeHouseId={activeHouseId} basePath="/overview" />;
 
@@ -43,7 +43,6 @@ export default async function OverviewPage({
       <>
         {switcher}
         <div className="empty-state">
-          <div className="big-emoji">📊</div>
           No details in {activeHouse.name} yet — add a few to see spend, budget, and sourcing at a glance.
         </div>
       </>
@@ -89,6 +88,7 @@ export default async function OverviewPage({
     .slice(0, 6);
 
   const purchasePrice = num(activeHouse.purchasePrice);
+  const downPayment = num(activeHouse.downPayment);
 
   return (
     <>
@@ -120,39 +120,69 @@ export default async function OverviewPage({
           <div className="ov-stat-num">{needsSourcing.length}</div>
           <div className="ov-stat-label">Need sourcing</div>
         </div>
+        <div className="ov-stat">
+          <div className="ov-stat-num">{money(furniture.actual)}</div>
+          <div className="ov-stat-label">Furniture spend</div>
+        </div>
       </div>
 
-      {purchasePrice ? (
+      {purchasePrice || downPayment ? (
         <div className="panel-card" style={{ marginBottom: "1rem" }}>
-          <h4>🏡 All-in value — {activeHouse.name}</h4>
+          <h4>All-in value — {activeHouse.name}</h4>
           <div className="totals-strip">
-            <div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Purchase price</div>
-              <div style={{ fontWeight: 700 }}>{money(purchasePrice)}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>+ Spent on projects</div>
-              <div style={{ fontWeight: 700 }}>{money(totalSpent)}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>All-in so far</div>
-              <div style={{ fontWeight: 800, color: "var(--accent-strong)" }}>
-                {money(purchasePrice + totalSpent)}
+            {purchasePrice ? (
+              <div className="tot">
+                Purchase price
+                <b>{money(purchasePrice)}</b>
               </div>
+            ) : null}
+            <div className="tot">
+              + Spent on projects
+              <b>{money(totalSpent)}</b>
             </div>
-            <div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>All-in if fully spent as planned</div>
-              <div style={{ fontWeight: 800, color: "var(--accent-strong)" }}>
-                {money(purchasePrice + totalProjected)}
-              </div>
-            </div>
+            {purchasePrice ? (
+              <>
+                <div className="tot">
+                  All-in so far
+                  <b style={{ color: "var(--accent-strong)" }}>
+                    {money(purchasePrice + totalSpent)}
+                  </b>
+                </div>
+                <div className="tot">
+                  All-in if fully spent as planned
+                  <b style={{ color: "var(--accent-strong)" }}>
+                    {money(purchasePrice + totalProjected)}
+                  </b>
+                </div>
+              </>
+            ) : null}
+            {downPayment ? (
+              <>
+                <div className="tot">
+                  Down payment
+                  <b>{money(downPayment)}</b>
+                </div>
+                <div className="tot">
+                  Cash in so far
+                  <b style={{ color: "var(--accent-strong)" }}>
+                    {money(downPayment + totalSpent)}
+                  </b>
+                </div>
+                <div className="tot">
+                  Cash in if fully spent as planned
+                  <b style={{ color: "var(--accent-strong)" }}>
+                    {money(downPayment + totalProjected)}
+                  </b>
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
       ) : null}
 
       <div className="panel-grid">
         <div className="panel-card">
-          <h4>⚠️ Over budget</h4>
+          <h4>Over budget</h4>
           {overBudget.length ? (
             overBudget.map(({ detail, est, act }) => (
               <Link
@@ -162,7 +192,7 @@ export default async function OverviewPage({
                 style={{ textDecoration: "none", color: "inherit" }}
               >
                 <div className="list-item-main">{roomPath(rooms, detail)}</div>
-                <div style={{ color: "var(--danger)", fontWeight: 700, fontSize: "0.85rem", flexShrink: 0 }}>
+                <div style={{ fontFamily: "var(--font-sans)", color: "var(--danger)", fontWeight: 700, fontSize: "0.85rem", flexShrink: 0 }}>
                   {money(act)} / {money(est)}
                 </div>
               </Link>
@@ -173,7 +203,7 @@ export default async function OverviewPage({
         </div>
 
         <div className="panel-card">
-          <h4>🧱 Materials needing sourcing</h4>
+          <h4>Materials needing sourcing</h4>
           {needsSourcing.length ? (
             needsSourcing.map(({ material, detail }) => (
               <Link
@@ -194,7 +224,7 @@ export default async function OverviewPage({
         </div>
 
         <div className="panel-card span2">
-          <h4>🗓️ Coming up</h4>
+          <h4>Coming up</h4>
           {upcoming.length ? (
             upcoming.map((d) => (
               <Link
@@ -208,7 +238,7 @@ export default async function OverviewPage({
                   <span className={`status-pill status-${d.status || "not_started"}`}>
                     {STATUS_LABEL[d.status || "not_started"]}
                   </span>
-                  <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                  <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.78rem", color: "var(--text-muted)" }}>
                     {fmtTimeframe(d.timeframeGranularity, d.timeframeValue)}
                   </span>
                 </div>

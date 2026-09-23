@@ -5,13 +5,29 @@
 // prototype's approach of computing over the in-memory state object.
 
 import { num } from "./format";
-import type { details, houses, lineItems, materialItems, rooms } from "@/db/schema";
+import type {
+  boardImageDetails,
+  boardImageRooms,
+  boardImages,
+  details,
+  houses,
+  lineItems,
+  materialItems,
+  progressPhotoDetails,
+  progressPhotos,
+  rooms,
+} from "@/db/schema";
 
 type Detail = typeof details.$inferSelect;
 type House = typeof houses.$inferSelect;
 type Room = typeof rooms.$inferSelect;
 type MaterialItem = typeof materialItems.$inferSelect;
 type LineItem = typeof lineItems.$inferSelect;
+type ProgressPhoto = typeof progressPhotos.$inferSelect;
+type ProgressPhotoDetailLink = typeof progressPhotoDetails.$inferSelect;
+type BoardImage = typeof boardImages.$inferSelect;
+type BoardImageDetailLink = typeof boardImageDetails.$inferSelect;
+type BoardImageRoomLink = typeof boardImageRooms.$inferSelect;
 
 export function detailsForHouse(allDetails: Detail[], houseId: string) {
   return allDetails.filter((d) => d.houseId === houseId);
@@ -24,6 +40,16 @@ export function detailsDirectOnHouse(allDetails: Detail[], houseId: string) {
 }
 export function roomsForHouse(allRooms: Room[], houseId: string) {
   return allRooms.filter((r) => r.houseId === houseId);
+}
+
+// A furniture-tagged detail's spend is money for the thing itself (a couch,
+// a lamp), not the renovation work — kept out of the normal budget totals
+// and surfaced separately instead (see furnitureRollup below).
+export function nonFurniture(ds: Detail[]): Detail[] {
+  return ds.filter((d) => !d.isFurniture);
+}
+export function furnitureOnly(ds: Detail[]): Detail[] {
+  return ds.filter((d) => d.isFurniture);
 }
 
 export function roughCost(materials: MaterialItem[], detailId: string): number {
@@ -90,11 +116,100 @@ export function detailsRollup(ds: Detail[], materials: MaterialItem[], lines: Li
 }
 
 export function houseRollup(allDetails: Detail[], materials: MaterialItem[], lines: LineItem[], houseId: string) {
-  return detailsRollup(detailsForHouse(allDetails, houseId), materials, lines);
+  return detailsRollup(nonFurniture(detailsForHouse(allDetails, houseId)), materials, lines);
 }
 
 export function roomRollup(allDetails: Detail[], materials: MaterialItem[], lines: LineItem[], roomId: string) {
-  return detailsRollup(detailsForRoom(allDetails, roomId), materials, lines);
+  return detailsRollup(nonFurniture(detailsForRoom(allDetails, roomId)), materials, lines);
+}
+
+// Same shape as houseRollup, but for the furniture-tagged details a normal
+// rollup excludes — lets callers show "Furniture: $X" with the same
+// money()/budgetDeltaLabel() formatting code as every other rollup figure.
+// houseId omitted means "across every house" (the Furniture gallery's use).
+export function furnitureRollup(
+  allDetails: Detail[],
+  materials: MaterialItem[],
+  lines: LineItem[],
+  houseId?: string
+) {
+  const scoped = houseId ? detailsForHouse(allDetails, houseId) : allDetails;
+  return detailsRollup(furnitureOnly(scoped), materials, lines);
+}
+
+// A photo's "does this belong to detail X" answer always goes through
+// progressPhotoDetails now, never progressPhotos.detailId directly — that
+// column is kept only as inert provenance (see the schema comment).
+export function photosForDetail(
+  photos: ProgressPhoto[],
+  links: ProgressPhotoDetailLink[],
+  detailId: string
+): ProgressPhoto[] {
+  const photoIds = new Set(links.filter((l) => l.detailId === detailId).map((l) => l.progressPhotoId));
+  return photos.filter((p) => photoIds.has(p.id));
+}
+
+// A room's gallery is the union of photos uploaded directly to the room
+// (roomId set, no detail chosen) and every photo linked to any detail
+// inside that room — so a photo uploaded through a detail's own panel shows
+// up here automatically, with nothing extra to write at upload time.
+export function photosForRoom(
+  photos: ProgressPhoto[],
+  links: ProgressPhotoDetailLink[],
+  allDetails: Detail[],
+  roomId: string
+): ProgressPhoto[] {
+  const roomDetailIds = new Set(detailsForRoom(allDetails, roomId).map((d) => d.id));
+  const linkedPhotoIds = new Set(
+    links.filter((l) => roomDetailIds.has(l.detailId)).map((l) => l.progressPhotoId)
+  );
+  const seen = new Set<string>();
+  const result: ProgressPhoto[] = [];
+  for (const p of photos) {
+    if ((p.roomId === roomId || linkedPhotoIds.has(p.id)) && !seen.has(p.id)) {
+      seen.add(p.id);
+      result.push(p);
+    }
+  }
+  return result;
+}
+
+// Same "does this belong to X" pattern as progress photos, but boardImages
+// has two independent join tables (a detail tag and a room tag are both
+// optional and unrelated — an image can have either, both, or neither).
+export function inspirationForDetail(
+  images: BoardImage[],
+  detailLinks: BoardImageDetailLink[],
+  detailId: string
+): BoardImage[] {
+  const imageIds = new Set(detailLinks.filter((l) => l.detailId === detailId).map((l) => l.boardImageId));
+  return images.filter((b) => imageIds.has(b.id));
+}
+
+export function inspirationForRoom(
+  images: BoardImage[],
+  detailLinks: BoardImageDetailLink[],
+  roomLinks: BoardImageRoomLink[],
+  allDetails: Detail[],
+  roomId: string
+): BoardImage[] {
+  const roomDetailIds = new Set(detailsForRoom(allDetails, roomId).map((d) => d.id));
+  const viaDetail = new Set(detailLinks.filter((l) => roomDetailIds.has(l.detailId)).map((l) => l.boardImageId));
+  const viaRoom = new Set(roomLinks.filter((l) => l.roomId === roomId).map((l) => l.boardImageId));
+  return images.filter((b) => viaDetail.has(b.id) || viaRoom.has(b.id));
+}
+
+// The "upload now, assign later" bucket shown at the top of a house's
+// Lookbook page — every inspiration image that house owns, minus anything
+// already tagged to a room or a detail.
+export function unassignedInspirationForHouse(
+  images: BoardImage[],
+  detailLinks: BoardImageDetailLink[],
+  roomLinks: BoardImageRoomLink[],
+  houseId: string
+): BoardImage[] {
+  const assignedIds = new Set([...detailLinks.map((l) => l.boardImageId), ...roomLinks.map((l) => l.boardImageId)]);
+  return images.filter((b) => b.houseId === houseId && !assignedIds.has(b.id));
 }
 
 export function detailPath(allHouses: House[], allRooms: Room[], detail: Detail | null | undefined): string {

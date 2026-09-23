@@ -1,10 +1,12 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { compressImage } from "@/lib/compress-image";
 import { addBoardImage, updateBoardImage, deleteBoardImage, updateDetail } from "@/lib/actions";
 import { previewPinterestBoard } from "@/lib/pinterest";
 import { PhotoPickerButton } from "@/components/photo-picker-button";
+import { Panel } from "@/components/panel";
 import type { boardImages as boardImagesTable } from "@/db/schema";
 
 type BoardImage = typeof boardImagesTable.$inferSelect;
@@ -22,16 +24,18 @@ type PinterestState =
 
 export function ReferencesPanel({
   detailId,
+  houseId,
   images,
   pinterestBoardUrl,
 }: {
   detailId: string;
+  houseId: string;
   images: BoardImage[];
   pinterestBoardUrl?: string | null;
 }) {
   const [, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const urlRef = useRef<HTMLInputElement>(null);
   const typeRef = useRef<HTMLSelectElement>(null);
 
@@ -42,17 +46,27 @@ export function ReferencesPanel({
   async function handleAdd() {
     const sourceUrl = urlRef.current?.value || "";
     const boardType = (typeRef.current?.value as BoardType) || "mood";
-    if (!pendingFile && !sourceUrl.trim()) return;
+    if (!pendingFiles.length && !sourceUrl.trim()) return;
 
     setUploading(true);
-    const formData = new FormData();
-    formData.set("detailId", detailId);
-    formData.set("boardType", boardType);
-    formData.set("sourceUrl", sourceUrl);
-    if (pendingFile) formData.set("file", await compressImage(pendingFile));
-    await addBoardImage(formData);
+    // One at a time (not Promise.all) so ordering stays predictable, same
+    // pattern as the multi-file progress-photo uploader.
+    for (const file of pendingFiles) {
+      const formData = new FormData();
+      formData.set("detailId", detailId);
+      formData.set("boardType", boardType);
+      formData.set("file", await compressImage(file));
+      await addBoardImage(formData);
+    }
+    if (sourceUrl.trim()) {
+      const formData = new FormData();
+      formData.set("detailId", detailId);
+      formData.set("boardType", boardType);
+      formData.set("sourceUrl", sourceUrl);
+      await addBoardImage(formData);
+    }
     setUploading(false);
-    setPendingFile(null);
+    setPendingFiles([]);
     if (urlRef.current) urlRef.current.value = "";
   }
 
@@ -94,8 +108,15 @@ export function ReferencesPanel({
   }
 
   return (
-    <div className="panel-card span2">
-      <h4>🎨 Mood board &amp; references</h4>
+    <Panel title="Mood board & references">
+      <div className="db-mood-hint" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.6rem" }}>
+        <span>
+          {images.length} image{images.length === 1 ? "" : "s"} saved to this detail
+        </span>
+        <Link href={`/lookbook?house=${houseId}`} className="link-btn">
+          Open mood board →
+        </Link>
+      </div>
 
       <div className="field" style={{ marginBottom: "0.7rem" }}>
         <label className="field-label">Pinterest board link</label>
@@ -213,7 +234,7 @@ export function ReferencesPanel({
                   )
                 }
               >
-                {img.boardType === "mood" ? "🎨 Mood" : "🔧 Assembly"}
+                {img.boardType === "mood" ? "Mood" : "Assembly"}
               </button>
               <input
                 className="board-note"
@@ -237,16 +258,17 @@ export function ReferencesPanel({
           <option value="reference">Assembly ref</option>
         </select>
         <PhotoPickerButton
-          onFileSelected={setPendingFile}
+          onFilesSelected={setPendingFiles}
+          multiple
           disabled={uploading}
           className="secondary"
-          label={pendingFile ? `📷 ${pendingFile.name.slice(0, 20)}` : "📷 Choose photo"}
+          label={pendingFiles.length ? `${pendingFiles.length} photo${pendingFiles.length === 1 ? "" : "s"}` : "Choose photos"}
         />
         <input placeholder="or paste an image URL" ref={urlRef} disabled={uploading} />
         <button className="secondary" onClick={handleAdd} disabled={uploading}>
           {uploading ? "Adding…" : "Add"}
         </button>
       </div>
-    </div>
+    </Panel>
   );
 }

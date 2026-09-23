@@ -71,7 +71,7 @@ function DetailRow({ detail, houses, rooms }: { detail: Detail; houses: Paramete
   return (
     <Link href={`/detail/${detail.id}`} className="horizon-item" style={{ textDecoration: "none", color: "inherit" }}>
       <div>
-        <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>{detail.name}</div>
+        <div style={{ fontFamily: "var(--font-sans)", fontWeight: 500, fontSize: "0.9375rem" }}>{detail.name}</div>
         <div className="breadcrumb">{detailPath(houses, rooms, detail)}</div>
       </div>
       <span className={`status-pill status-${detail.status || "not_started"}`}>
@@ -87,7 +87,6 @@ export default async function HorizonPage() {
   if (!details.length) {
     return (
       <div className="empty-state">
-        <div className="big-emoji">🗓️</div>
         Nothing scheduled yet — timeframes you set on a detail will show up here, grouped from soonest to
         someday.
       </div>
@@ -120,7 +119,7 @@ export default async function HorizonPage() {
 
       {done.length ? (
         <details className="horizon-done">
-          <summary>✓ Done ({done.length})</summary>
+          <summary>Done ({done.length})</summary>
           {doneGroups.map((g) => (
             <div className="horizon-group" key={g.key}>
               <h3>{g.label}</h3>
