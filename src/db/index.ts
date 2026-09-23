@@ -15,5 +15,12 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-const client = postgres(process.env.DATABASE_URL, { max: 1 });
+// prepare: false — Neon's pooled ("-pooler") endpoint fronts connections
+// with a PgBouncer-style transaction pooler, which caches server-side
+// prepared statements by query text across different client connections.
+// With it left on, a query's plan can get cached against the schema as it
+// existed the first time that exact query text ran and keep being served
+// stale after a schema change, even to brand-new deployments/connections —
+// this is Neon's own documented recommendation for pooled connections.
+const client = postgres(process.env.DATABASE_URL, { max: 1, prepare: false });
 export const db = drizzle(client, { schema });
