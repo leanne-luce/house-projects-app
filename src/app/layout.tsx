@@ -36,6 +36,12 @@ const syne = Syne({
 export const metadata: Metadata = {
   title: "Club Luce | Studio",
   description: "Personal renovation project tracker",
+  icons: {
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  other: {
+    "apple-mobile-web-app-title": "Club Luce",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
