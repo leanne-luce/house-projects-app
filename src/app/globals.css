@@ -214,13 +214,6 @@
      the .house-stats pattern above, which already used text-muted). */
   .room-card-stats { font-family: var(--font-sans); font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem; }
   .room-card-body { padding:0.65rem 0.75rem 0.75rem 0.9rem; border-top:1px solid var(--border); }
-  .detail-row {
-    display:flex; align-items:center; justify-content:space-between; gap:0.6rem;
-    padding:0.55rem 0.7rem; border-radius:0; background:var(--surface-2); margin-bottom:0.4rem; cursor:pointer;
-  }
-  .detail-row:hover { background:var(--sand-deep); }
-  .detail-name { font-family: var(--font-sans); font-weight:500; font-size:0.9375rem; }
-  .detail-meta { font-family: var(--font-sans); font-size:0.8125rem; color:var(--text-muted); display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; }
   .status-pill { font-family: var(--font-sans); font-size:0.6875rem; font-weight:500; padding:0.2rem 0.6rem; border-radius:999px; text-transform:uppercase; letter-spacing:0.08em; white-space:nowrap; }
   .status-not_started { background:var(--surface-2); color:var(--text-muted); border:1px solid var(--border); }
   .status-in_progress { background:var(--warn-soft); color:var(--warn); }
@@ -247,8 +240,22 @@
   .section { margin-bottom:1.3rem; }
   .section-title { font-family: var(--font-sans); font-size:0.7rem; font-weight:500; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-muted); margin-bottom:0.6rem; display:flex; align-items:center; justify-content:space-between; }
   .list-item { display:flex; align-items:flex-start; justify-content:space-between; gap:0.6rem; padding:0.75rem 0.875rem; background:var(--surface-2); border-radius:0; margin-bottom:0.375rem; }
+  /* Clickable variant — used for rows that navigate (detail rows on Houses
+     and Projects, and the Overview panel links). Center-aligned since these
+     rows pair a compact title+meta block with a single trailing pill/chevron,
+     unlike the top-aligned default used for multi-line editable rows
+     (Receipts line items, Detail page material/cost lists). */
+  .list-item.clickable { align-items:center; cursor:pointer; }
+  .list-item.clickable:hover { background:var(--sand-deep); }
   .list-item-main { min-width:0; flex:1; font-family: var(--font-sans); font-size:0.9375rem; line-height:1.55; }
+  .list-item-title { font-weight:500; }
   .list-item-sub { font-family: var(--font-sans); font-size:0.8125rem; color:var(--text-muted); margin-top:0.25rem; }
+  /* Meta row — a wrapped inline group of small facts under a title (status
+     pill, timeframe, cost). Same tone/size as list-item-sub but flex-wrap
+     for multiple short pieces instead of one line of text. */
+  .list-item-meta { font-family: var(--font-sans); font-size:0.8125rem; color:var(--text-muted); display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-top:0.25rem; }
+  .list-item-trailing { flex-shrink:0; display:flex; align-items:center; gap:0.5rem; }
+  .list-item-chevron { color:var(--text-faint); }
   .totals-strip { display:flex; gap:2rem; flex-wrap:wrap; background:var(--surface-2); border-radius:0; padding:1rem 1.25rem; margin-bottom:0.6rem; }
   .totals-strip .tot { font-family: var(--font-sans); font-size:0.7rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-faint); }
   .totals-strip .tot b { color:var(--text); font-family: var(--font-display); font-weight:400; font-size:1.25rem; letter-spacing:-0.02em; display:block; margin-top:0.25rem; }
@@ -303,8 +310,6 @@
   /* Horizon */
   .horizon-group { margin-bottom:1.1rem; }
   .horizon-group h3 { font-family: var(--font-sans); font-size:0.7rem; font-weight:400; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-faint); margin:0 0 0.75rem; }
-  .horizon-item { display:flex; justify-content:space-between; align-items:center; padding:0.55rem 0.7rem; background:var(--surface-2); border-radius:0; margin-bottom:0.4rem; cursor:pointer; }
-  .horizon-item:hover { background:var(--sand-deep); }
   /* Collapsed-by-default "Done" section — a plain <details>/<summary> needs
      no client component just to remember open/closed. */
   .horizon-done { margin-top:1.4rem; padding-top:1rem; border-top:1px solid var(--border); }

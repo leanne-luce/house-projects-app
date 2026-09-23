@@ -69,14 +69,16 @@ function groupByTimeframe(details: Detail[]) {
 
 function DetailRow({ detail, houses, rooms }: { detail: Detail; houses: Parameters<typeof detailPath>[0]; rooms: Parameters<typeof detailPath>[1] }) {
   return (
-    <Link href={`/detail/${detail.id}`} className="horizon-item" style={{ textDecoration: "none", color: "inherit" }}>
-      <div>
-        <div style={{ fontFamily: "var(--font-sans)", fontWeight: 500, fontSize: "0.9375rem" }}>{detail.name}</div>
-        <div className="breadcrumb">{detailPath(houses, rooms, detail)}</div>
+    <Link href={`/detail/${detail.id}`} className="list-item clickable" style={{ textDecoration: "none", color: "inherit" }}>
+      <div className="list-item-main">
+        <div className="list-item-title">{detail.name}</div>
+        <div className="list-item-meta">{detailPath(houses, rooms, detail)}</div>
       </div>
-      <span className={`status-pill status-${detail.status || "not_started"}`}>
-        {STATUS_LABEL[detail.status || "not_started"]}
-      </span>
+      <div className="list-item-trailing">
+        <span className={`status-pill status-${detail.status || "not_started"}`}>
+          {STATUS_LABEL[detail.status || "not_started"]}
+        </span>
+      </div>
     </Link>
   );
 }

@@ -402,10 +402,10 @@ function DetailRow({
 }) {
   const tf = fmtTimeframe(detail.timeframeGranularity, detail.timeframeValue);
   return (
-    <div className="detail-row" onClick={onOpen}>
-      <div>
-        <div className="detail-name">{detail.name}</div>
-        <div className="detail-meta">
+    <div className="list-item clickable" onClick={onOpen}>
+      <div className="list-item-main">
+        <div className="list-item-title">{detail.name}</div>
+        <div className="list-item-meta">
           <span className={`status-pill status-${detail.status || "not_started"}`}>
             {STATUS_LABEL[detail.status || "not_started"]}
           </span>
@@ -418,7 +418,9 @@ function DetailRow({
           ) : null}
         </div>
       </div>
-      <span style={{ color: "var(--text-faint)" }}>›</span>
+      <div className="list-item-trailing">
+        <span className="list-item-chevron">›</span>
+      </div>
     </div>
   );
 }
