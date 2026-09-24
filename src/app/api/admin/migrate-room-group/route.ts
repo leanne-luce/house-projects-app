@@ -1,6 +1,17 @@
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 
+// force-dynamic: a bare `GET` handler with no dynamic API calls is eligible
+// for static rendering in the App Router, which means Next.js can execute
+// it once (at build time or on first request) and serve that cached
+// response forever after — every subsequent hit replaying stale JSON
+// without re-running a single statement. That's almost certainly why
+// earlier hits to this route stopped actually reaching the database:
+// nothing here reads cookies/headers/searchParams, so nothing signaled
+// "run this per-request." Every other data-fetching page in this app
+// already opts out the same way (see e.g. src/app/(app)/houses/page.tsx).
+export const dynamic = "force-dynamic";
+
 // TEMPORARY one-off migration endpoint. Local dev's Postgres gets schema
 // changes applied directly (via psql) as each feature is built, but nothing
 // has yet reached whatever database production actually connects to — the
@@ -116,5 +127,13 @@ export async function GET() {
     sql`SELECT description, product_url, retailer_name FROM material_items WHERE product_url IS NOT NULL`
   );
 
-  return Response.json({ ok: true, rooms, paletteColors, backfilled, unmatchedSwatches, materialsWithLinks });
+  // Explicit no-store: repeated GET hits to this route kept coming back
+  // with an identical, stale response body even across deploys that
+  // changed what it returns — pointing at a cache (browser or edge/CDN)
+  // serving an old response rather than this handler re-running. This is
+  // belt-and-suspenders with `dynamic = "force-dynamic"` above.
+  return Response.json(
+    { ok: true, rooms, paletteColors, backfilled, unmatchedSwatches, materialsWithLinks },
+    { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
+  );
 }
