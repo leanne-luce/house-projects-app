@@ -27,12 +27,16 @@ import {
   progressPhotoDetails,
   receipts,
   receiptLineItems,
+  ROOM_GROUP_VALUES,
 } from "@/db/schema";
+
 import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { saveAsset, saveAssetBuffer, readAssetBuffer } from "./storage";
 import { runOcr, extractPdfText, parseReceiptLines } from "./ocr";
 import crypto from "node:crypto";
+
+type RoomGroup = (typeof ROOM_GROUP_VALUES)[number];
 
 function revalidateEverything() {
   // Personal-scale app, cheap to over-invalidate rather than track exactly
@@ -154,13 +158,17 @@ export async function deleteHouse(id: string) {
 
 // ---------- Rooms ----------
 
-export async function addRoom(houseId: string, name: string) {
+export async function addRoom(houseId: string, name: string, group?: RoomGroup) {
   if (!name.trim()) return;
-  await db.insert(rooms).values({ houseId, name: name.trim() });
+  if (group && !ROOM_GROUP_VALUES.includes(group)) throw new Error(`Invalid room group: ${group}`);
+  await db.insert(rooms).values({ houseId, name: name.trim(), group: group || "interior" });
   revalidateEverything();
 }
 
-export async function updateRoom(id: string, patch: Partial<{ name: string }>) {
+export async function updateRoom(id: string, patch: Partial<{ name: string; group: RoomGroup }>) {
+  if (patch.group && !ROOM_GROUP_VALUES.includes(patch.group)) {
+    throw new Error(`Invalid room group: ${patch.group}`);
+  }
   await db.update(rooms).set(patch).where(eq(rooms.id, id));
   revalidateEverything();
 }

@@ -190,6 +190,17 @@
   .room-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem; }
   .room-name { font-family: var(--font-sans); font-size:0.75rem; font-weight:500; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; }
 
+  /* Room groups — Interior/Exterior/Utility sections, each a labeled
+     .room-grid. :first-child gets the smaller top margin that used to sit
+     on .room-grid itself (right under the house-head border); later
+     sections space out more to read as distinct groups. The trailing
+     "Not in a specific room" bucket reuses .room-group with no title, so it
+     picks up the same spacing whether or not any group sections rendered
+     above it. */
+  .room-group { margin-top:1.4rem; }
+  .room-group:first-child { margin-top:0.9rem; }
+  .room-group-title { font-family: var(--font-sans); font-size:0.75rem; font-weight:600; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.5rem; }
+
   /* Room grid — rooms as collapsible cards, 2 columns on tablet/desktop and
      1 on phone (same 760px breakpoint the panel-grid/db-columns layouts
      already use). align-items:start keeps a collapsed card from being
@@ -198,7 +209,7 @@
      align-items per-item), so when two rooms in the same row are both open,
      the shorter one's card still grows to match — consistent row heights
      without dragging collapsed neighbors along. */
-  .room-grid { display:grid; grid-template-columns:1fr; gap:0.7rem; margin-top:0.9rem; align-items:start; }
+  .room-grid { display:grid; grid-template-columns:1fr; gap:0.7rem; align-items:start; }
   @media (min-width:760px) {
     .room-grid { grid-template-columns:1fr 1fr; }
   }
@@ -217,6 +228,11 @@
   /* text-muted, not text-faint (2.35:1 against this background — matches
      the .house-stats pattern above, which already used text-muted). */
   .room-card-stats { font-family: var(--font-sans); font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem; }
+  .room-group-select {
+    width:auto; margin-top:0.3rem; border:1px solid var(--border-strong); background:var(--surface);
+    font-family: var(--font-sans); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em;
+    padding:0.15rem 0.4rem; color:var(--text-muted); cursor:pointer;
+  }
   .room-card-body { padding:0.65rem 0.75rem 0.75rem 0.9rem; border-top:1px solid var(--border); }
   .status-pill { font-family: var(--font-sans); font-size:0.6875rem; font-weight:500; padding:0.2rem 0.6rem; border-radius:999px; text-transform:uppercase; letter-spacing:0.08em; white-space:nowrap; }
   .status-not_started { background:var(--surface-2); color:var(--text-muted); border:1px solid var(--border); }

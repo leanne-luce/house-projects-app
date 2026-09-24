@@ -25,6 +25,7 @@ import {
   deleteRoom,
   addDetail,
 } from "@/lib/actions";
+import { ROOM_GROUP_VALUES } from "@/db/schema";
 import type { details as detailsTable, houses as housesTable, lineItems as lineItemsTable, materialItems as materialItemsTable, rooms as roomsTable } from "@/db/schema";
 
 type House = typeof housesTable.$inferSelect;
@@ -32,6 +33,13 @@ type Room = typeof roomsTable.$inferSelect;
 type Detail = typeof detailsTable.$inferSelect;
 type MaterialItem = typeof materialItemsTable.$inferSelect;
 type LineItem = typeof lineItemsTable.$inferSelect;
+type RoomGroup = (typeof ROOM_GROUP_VALUES)[number];
+
+const ROOM_GROUP_LABEL: Record<RoomGroup, string> = {
+  interior: "Interior",
+  exterior: "Exterior",
+  utility: "Utility",
+};
 
 const STATUS_LABEL: Record<string, string> = {
   not_started: "Not started",
@@ -121,6 +129,61 @@ export function HouseTree({
         const directDetails = detailsDirectOnHouse(details, h.id);
         const delta = budgetDeltaLabel(rollup.actual, rollup.rough);
 
+        const renderRoomCard = (r: Room) => {
+          const ds = detailsForRoom(details, r.id);
+          const rr = roomRollup(details, materialItems, lineItems, r.id);
+          return (
+            <RoomCard
+              key={r.id}
+              title={
+                <input
+                  className="room-name-input"
+                  defaultValue={r.name}
+                  onClick={(e) => e.stopPropagation()}
+                  onBlur={(e) => {
+                    if (e.target.value.trim() && e.target.value !== r.name) {
+                      startTransition(() => updateRoom(r.id, { name: e.target.value.trim() }));
+                    }
+                  }}
+                />
+              }
+              group={(r.group as RoomGroup) || "interior"}
+              onGroupChange={(g) => startTransition(() => updateRoom(r.id, { group: g }))}
+              rollup={rr}
+              open={expandedRooms.has(r.id)}
+              onToggle={() => toggleRoom(r.id)}
+              onDelete={() => {
+                const msg = ds.length
+                  ? `${ds.length} detail(s) in this room will move up to sit directly under the house. Continue?`
+                  : "Delete this room?";
+                if (confirm(msg)) startTransition(() => deleteRoom(r.id));
+              }}
+            >
+              {ds.length ? (
+                ds.map((d) => {
+                  const act = actualCost(lineItems, d.id);
+                  return (
+                    <DetailRow
+                      key={d.id}
+                      detail={d}
+                      rough={estimatedSpendFor(d, materialItems, act)}
+                      actual={act}
+                      onOpen={() => router.push(`/detail/${d.id}`)}
+                    />
+                  );
+                })
+              ) : (
+                <div className="empty-note">No details yet.</div>
+              )}
+              <div className="add-row-btns">
+                <button className="ghost" onClick={() => setModal({ type: "add-detail", houseId: h.id, roomId: r.id })}>
+                  + Add detail
+                </button>
+              </div>
+            </RoomCard>
+          );
+        };
+
         return (
           <div className="card house-card" key={h.id}>
             <div className="house-head" onClick={() => toggle(h.id)}>
@@ -176,88 +239,45 @@ export function HouseTree({
 
             {open ? (
               <div className="house-body">
-                <div className="room-grid">
-                  {houseRooms.map((r) => {
-                    const ds = detailsForRoom(details, r.id);
-                    const rr = roomRollup(details, materialItems, lineItems, r.id);
-                    return (
-                      <RoomCard
-                        key={r.id}
-                        title={
-                          <input
-                            className="room-name-input"
-                            defaultValue={r.name}
-                            onClick={(e) => e.stopPropagation()}
-                            onBlur={(e) => {
-                              if (e.target.value.trim() && e.target.value !== r.name) {
-                                startTransition(() => updateRoom(r.id, { name: e.target.value.trim() }));
-                              }
-                            }}
-                          />
-                        }
-                        rollup={rr}
-                        open={expandedRooms.has(r.id)}
-                        onToggle={() => toggleRoom(r.id)}
-                        onDelete={() => {
-                          const msg = ds.length
-                            ? `${ds.length} detail(s) in this room will move up to sit directly under the house. Continue?`
-                            : "Delete this room?";
-                          if (confirm(msg)) startTransition(() => deleteRoom(r.id));
-                        }}
-                      >
-                        {ds.length ? (
-                          ds.map((d) => {
-                            const act = actualCost(lineItems, d.id);
-                            return (
-                              <DetailRow
-                                key={d.id}
-                                detail={d}
-                                rough={estimatedSpendFor(d, materialItems, act)}
-                                actual={act}
-                                onOpen={() => router.push(`/detail/${d.id}`)}
-                              />
-                            );
-                          })
-                        ) : (
-                          <div className="empty-note">No details yet.</div>
-                        )}
-                        <div className="add-row-btns">
-                          <button
-                            className="ghost"
-                            onClick={() => setModal({ type: "add-detail", houseId: h.id, roomId: r.id })}
-                          >
-                            + Add detail
-                          </button>
-                        </div>
-                      </RoomCard>
-                    );
-                  })}
+                {ROOM_GROUP_VALUES.map((g) => {
+                  const groupRooms = houseRooms.filter((r) => ((r.group as RoomGroup) || "interior") === g);
+                  if (!groupRooms.length) return null;
+                  return (
+                    <div className="room-group" key={g}>
+                      <div className="room-group-title">{ROOM_GROUP_LABEL[g]}</div>
+                      <div className="room-grid">{groupRooms.map(renderRoomCard)}</div>
+                    </div>
+                  );
+                })}
 
-                  <RoomCard
-                    title={<span className="room-name">{houseRooms.length ? "Not in a specific room" : "Details"}</span>}
-                    rollup={detailsRollup(nonFurniture(directDetails), materialItems, lineItems)}
-                    open={expandedRooms.has(`${h.id}:none`)}
-                    onToggle={() => toggleRoom(`${h.id}:none`)}
-                  >
-                    {directDetails.length ? (
-                      directDetails.map((d) => {
-                        const act = actualCost(lineItems, d.id);
-                        return (
-                          <DetailRow
-                            key={d.id}
-                            detail={d}
-                            rough={estimatedSpendFor(d, materialItems, act)}
-                            actual={act}
-                            onOpen={() => router.push(`/detail/${d.id}`)}
-                          />
-                        );
-                      })
-                    ) : (
-                      <div className="empty-note">
-                        {houseRooms.length ? "Nothing loose here." : "No details yet."}
-                      </div>
-                    )}
-                  </RoomCard>
+                <div className="room-group">
+                  <div className="room-grid">
+                    <RoomCard
+                      title={<span className="room-name">{houseRooms.length ? "Not in a specific room" : "Details"}</span>}
+                      rollup={detailsRollup(nonFurniture(directDetails), materialItems, lineItems)}
+                      open={expandedRooms.has(`${h.id}:none`)}
+                      onToggle={() => toggleRoom(`${h.id}:none`)}
+                    >
+                      {directDetails.length ? (
+                        directDetails.map((d) => {
+                          const act = actualCost(lineItems, d.id);
+                          return (
+                            <DetailRow
+                              key={d.id}
+                              detail={d}
+                              rough={estimatedSpendFor(d, materialItems, act)}
+                              actual={act}
+                              onOpen={() => router.push(`/detail/${d.id}`)}
+                            />
+                          );
+                        })
+                      ) : (
+                        <div className="empty-note">
+                          {houseRooms.length ? "Nothing loose here." : "No details yet."}
+                        </div>
+                      )}
+                    </RoomCard>
+                  </div>
                 </div>
 
                 <div className="add-row-btns">
@@ -330,6 +350,8 @@ function RoomCard({
   open,
   onToggle,
   onDelete,
+  group,
+  onGroupChange,
   children,
 }: {
   title: React.ReactNode;
@@ -345,6 +367,8 @@ function RoomCard({
   open: boolean;
   onToggle: () => void;
   onDelete?: () => void;
+  group?: RoomGroup;
+  onGroupChange?: (group: RoomGroup) => void;
   children: React.ReactNode;
 }) {
   const delta = budgetDeltaLabel(rollup.actual, rollup.rough);
@@ -355,6 +379,20 @@ function RoomCard({
         <span className={`chev ${open ? "open" : ""}`}>▸</span>
         <div className="room-card-title">
           {title}
+          {onGroupChange ? (
+            <select
+              className="room-group-select"
+              value={group}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => onGroupChange(e.target.value as RoomGroup)}
+            >
+              {ROOM_GROUP_VALUES.map((g) => (
+                <option key={g} value={g}>
+                  {ROOM_GROUP_LABEL[g]}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <div className="room-card-stats">
             {rollup.count} detail{rollup.count === 1 ? "" : "s"} · {money(rollup.actual)}
             {rollup.rough ? ` / ${money(rollup.rough)}` : ""}
@@ -477,9 +515,11 @@ function AddModal({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            const name = (e.currentTarget.elements.namedItem("name") as HTMLInputElement).value;
+            const form = e.currentTarget;
+            const name = (form.elements.namedItem("name") as HTMLInputElement).value;
+            const group = (form.elements.namedItem("group") as HTMLSelectElement).value as RoomGroup;
             startTransition(async () => {
-              await addRoom(modal.houseId, name);
+              await addRoom(modal.houseId, name, group);
               onClose();
             });
           }}
@@ -487,6 +527,16 @@ function AddModal({
           <div className="field">
             <label className="field-label">Room / area name</label>
             <input name="name" placeholder="e.g. Exterior, Kitchen, Master bedroom" autoFocus />
+          </div>
+          <div className="field">
+            <label className="field-label">Group</label>
+            <select name="group" defaultValue="interior">
+              {ROOM_GROUP_VALUES.map((g) => (
+                <option key={g} value={g}>
+                  {ROOM_GROUP_LABEL[g]}
+                </option>
+              ))}
+            </select>
           </div>
           <button className="primary" type="submit" disabled={pending}>
             {pending ? "Adding…" : "Add room"}

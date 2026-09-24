@@ -51,14 +51,24 @@ export const houses = pgTable("houses", {
   createdAt: createdAt(),
 });
 
-export const rooms = pgTable("rooms", {
-  id: id(),
-  houseId: text("house_id")
-    .notNull()
-    .references(() => houses.id),
-  name: text("name").notNull(),
-  createdAt: createdAt(),
-});
+export const ROOM_GROUP_VALUES = ["interior", "exterior", "utility"] as const;
+
+export const rooms = pgTable(
+  "rooms",
+  {
+    id: id(),
+    houseId: text("house_id")
+      .notNull()
+      .references(() => houses.id),
+    name: text("name").notNull(),
+    // DEVIATION (addition, on request): groups rooms under the House page's
+    // Interior/Exterior/Utility sections. Defaults to 'interior' so a
+    // migration backfilling existing rooms never leaves one un-groupable.
+    group: text("group").notNull().default("interior"),
+    createdAt: createdAt(),
+  },
+  (table) => [check("room_group_check", sql`${table.group} in ('interior','exterior','utility')`)]
+);
 
 export const STATUS_VALUES = ["not_started", "in_progress", "done", "on_hold"] as const;
 // DEVIATION (plan section "Data model" #2): the prototype used '' to mean
