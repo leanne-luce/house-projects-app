@@ -5,6 +5,7 @@ import { useRef, useTransition } from "react";
 import { money, num } from "@/lib/format";
 import { actualCost, estimatedSpendFor } from "@/lib/derived";
 import { estimateCost } from "@/lib/cost-estimator";
+import { sanitizeProductUrl, retailerNameFromUrl } from "@/lib/product-link";
 import {
   updateDetail,
   deleteDetail,
@@ -459,6 +460,50 @@ function MaterialsPanel({ detailId, materials }: { detailId: string; materials: 
                   </div>
                 </div>
                 <div className="list-item-sub" style={{ marginTop: "0.4rem" }}>Total: {money(total)}</div>
+                <div className="field" style={{ marginTop: "0.5rem", marginBottom: 0 }}>
+                  <label className="field-label">Product link</label>
+                  <input
+                    defaultValue={m.productUrl || ""}
+                    placeholder="Paste a product URL"
+                    onBlur={(e) => {
+                      const value = e.target.value.trim();
+                      if (value === (m.productUrl || "")) return;
+                      // Validated client-side first (sanitizeProductUrl is
+                      // pure JS, safe to call here) — updateMaterial is an
+                      // async server action, so a throw inside it rejects
+                      // the returned promise rather than throwing
+                      // synchronously; validating before the call lets this
+                      // catch reach the user instead of becoming an
+                      // unhandled rejection.
+                      let sanitized: string | null;
+                      try {
+                        sanitized = value ? sanitizeProductUrl(value) : null;
+                      } catch (err) {
+                        alert(err instanceof Error ? err.message : "That link doesn't look valid.");
+                        e.target.value = m.productUrl || "";
+                        return;
+                      }
+                      startTransition(() => updateMaterial(m.id, { productUrl: sanitized }));
+                    }}
+                  />
+                </div>
+                {m.productUrl ? (
+                  <div className="material-link-row">
+                    <a href={m.productUrl} target="_blank" rel="noopener noreferrer" className="material-link">
+                      🔗 {m.retailerName || retailerNameFromUrl(m.productUrl)}
+                    </a>
+                    <input
+                      className="material-retailer-input"
+                      defaultValue={m.retailerName || ""}
+                      placeholder="Rename retailer"
+                      onBlur={(e) => {
+                        if (e.target.value.trim() !== (m.retailerName || "")) {
+                          startTransition(() => updateMaterial(m.id, { retailerName: e.target.value.trim() || null }));
+                        }
+                      }}
+                    />
+                  </div>
+                ) : null}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexShrink: 0 }}>
                 <select
@@ -498,8 +543,17 @@ function AddMaterialForm({ detailId }: { detailId: string }) {
         const desc = (form.elements.namedItem("desc") as HTMLInputElement).value;
         const qty = (form.elements.namedItem("qty") as HTMLInputElement).value;
         const cost = (form.elements.namedItem("cost") as HTMLInputElement).value;
+        const rawUrl = (form.elements.namedItem("productUrl") as HTMLInputElement).value;
+        const retailerOverride = (form.elements.namedItem("retailerName") as HTMLInputElement).value;
         if (!desc.trim()) return;
-        startTransition(() => addMaterial(detailId, desc, qty, cost));
+        let productUrl: string | undefined;
+        try {
+          productUrl = rawUrl.trim() ? sanitizeProductUrl(rawUrl) : undefined;
+        } catch (err) {
+          alert(err instanceof Error ? err.message : "That link doesn't look valid.");
+          return;
+        }
+        startTransition(() => addMaterial(detailId, desc, qty, cost, { productUrl, retailerName: retailerOverride }));
         form.reset();
       }}
     >
@@ -515,6 +569,16 @@ function AddMaterialForm({ detailId }: { detailId: string }) {
         <div className="field">
           <label className="field-label">Unit cost</label>
           <input name="cost" type="number" min={0} step="any" placeholder="$" />
+        </div>
+      </div>
+      <div className="field-row">
+        <div className="field">
+          <label className="field-label">Product link</label>
+          <input name="productUrl" placeholder="Optional — paste a URL" />
+        </div>
+        <div className="field">
+          <label className="field-label">Retailer</label>
+          <input name="retailerName" placeholder="Auto from domain" />
         </div>
       </div>
       <button className="secondary" type="submit">

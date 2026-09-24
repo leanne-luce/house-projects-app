@@ -37,6 +37,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { saveAsset, saveAssetBuffer, readAssetBuffer } from "./storage";
 import { runOcr, extractPdfText, parseReceiptLines } from "./ocr";
+import { sanitizeProductUrl, retailerNameFromUrl } from "./product-link";
 import crypto from "node:crypto";
 
 type RoomGroup = (typeof ROOM_GROUP_VALUES)[number];
@@ -375,23 +376,50 @@ export async function deleteChecklistItem(id: string) {
 
 // ---------- Materials ----------
 
-export async function addMaterial(detailId: string, description: string, qty: string, unitCost: string) {
+export async function addMaterial(
+  detailId: string,
+  description: string,
+  qty: string,
+  unitCost: string,
+  link?: { productUrl?: string | null; retailerName?: string | null }
+) {
   if (!description.trim()) return;
+  const productUrl = link?.productUrl ? sanitizeProductUrl(link.productUrl) : null;
+  const retailerName = productUrl ? link?.retailerName?.trim() || retailerNameFromUrl(productUrl) : null;
   await db.insert(materialItems).values({
     detailId,
     description: description.trim(),
     roughQuantity: qty || "1",
     roughUnitCost: unitCost || "0",
     status: "idea",
+    productUrl,
+    retailerName,
   });
   revalidateEverything();
 }
 
 export async function updateMaterial(
   id: string,
-  patch: Partial<{ description: string; roughQuantity: string; roughUnitCost: string; status: string }>
+  patch: Partial<{
+    description: string;
+    roughQuantity: string;
+    roughUnitCost: string;
+    status: string;
+    productUrl: string | null;
+    retailerName: string | null;
+  }>
 ) {
-  await db.update(materialItems).set(patch).where(eq(materialItems.id, id));
+  const next = { ...patch };
+  if ("productUrl" in next) {
+    next.productUrl = next.productUrl ? sanitizeProductUrl(next.productUrl) : null;
+    if (!next.productUrl && !("retailerName" in patch)) {
+      next.retailerName = null;
+    }
+  }
+  if ("retailerName" in next) {
+    next.retailerName = next.retailerName?.trim() || null;
+  }
+  await db.update(materialItems).set(next).where(eq(materialItems.id, id));
   revalidateEverything();
 }
 

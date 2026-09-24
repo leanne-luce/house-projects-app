@@ -184,6 +184,14 @@ export const materialItems = pgTable(
     roughQuantity: numeric("rough_quantity").notNull().default("1"),
     roughUnitCost: numeric("rough_unit_cost").notNull().default("0"),
     status: text("status").notNull().default("idea"),
+    // DEVIATION (addition, on request): a link to where this material can be
+    // bought. Both nullable — optional, so every material added before this
+    // existed stays valid. retailerName is auto-derived from productUrl's
+    // domain but stays editable by hand (see src/lib/product-link.ts).
+    // Fields the page itself will eventually be scraped for (title, price,
+    // image, dimensions/coverage) aren't added yet — that's a later task.
+    productUrl: text("product_url"),
+    retailerName: text("retailer_name"),
     createdAt: createdAt(),
   },
   (table) => [

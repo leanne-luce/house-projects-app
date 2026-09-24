@@ -468,6 +468,18 @@
   .db-material-status.need_to_source { background:var(--warn-soft); color:var(--warn); }
   .db-material-status.purchased { background:var(--good-soft); color:var(--good); }
 
+  /* A material's product link — shown as the retailer name + icon, never
+     the raw URL. The small text input beside it is only for correcting the
+     auto-derived retailer name, not a second copy of the link. */
+  .material-link-row { display:flex; align-items:baseline; gap:0.5rem; margin-top:0.4rem; flex-wrap:wrap; }
+  .material-link { font-family: var(--font-sans); font-size:0.8125rem; font-weight:500; color:var(--accent-strong); text-decoration:none; }
+  .material-link:hover { text-decoration:underline; }
+  .material-retailer-input {
+    width:auto; flex:1; min-width:6rem; border:none; background:transparent; padding:0.1rem 0;
+    font-family: var(--font-sans); font-size:0.75rem; color:var(--text-faint);
+  }
+  .material-retailer-input:focus { outline:1px solid var(--border-strong); background:var(--surface); padding:0.1rem 0.3rem; }
+
   .db-mood-hint { font-family: var(--font-sans); font-size:0.8125rem; color:var(--text-muted); margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid var(--border); }
 
   /* Detail page — small-screen refinements. The hero/panel paddings and the
