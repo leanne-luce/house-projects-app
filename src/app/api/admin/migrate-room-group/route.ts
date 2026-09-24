@@ -23,6 +23,16 @@ import { sql } from "drizzle-orm";
 // alone in paletteSwatches, nothing is dropped. The backfill's NOT EXISTS
 // guard makes it safe to run again without creating duplicate links.
 //
+// ...then material_items.product_url / retailer_name (product links). No
+// backfill needed there — both are brand-new optional fields, existing
+// materials just get NULL, which is exactly "stays valid."
+//
+// This route has grown a step for every feature that's touched the schema
+// (four now) because production's DATABASE_URL can't be read or matched
+// against Neon's console from outside the app — this is the only place
+// that's confirmed to reach the right database. Worth replacing with a
+// real migration-on-deploy step before the next one.
+//
 // DELETE THIS ROUTE once /houses and /detail/[id] are confirmed working in
 // production.
 export async function GET() {
@@ -97,8 +107,14 @@ export async function GET() {
     )
   `);
 
+  await db.execute(sql`ALTER TABLE "material_items" ADD COLUMN IF NOT EXISTS "product_url" text`);
+  await db.execute(sql`ALTER TABLE "material_items" ADD COLUMN IF NOT EXISTS "retailer_name" text`);
+
   const rooms = await db.execute(sql`SELECT name, "group" FROM rooms ORDER BY created_at`);
   const paletteColors = await db.execute(sql`SELECT name, hex FROM house_palette_colors ORDER BY created_at`);
+  const materialsWithLinks = await db.execute(
+    sql`SELECT description, product_url, retailer_name FROM material_items WHERE product_url IS NOT NULL`
+  );
 
-  return Response.json({ ok: true, rooms, paletteColors, backfilled, unmatchedSwatches });
+  return Response.json({ ok: true, rooms, paletteColors, backfilled, unmatchedSwatches, materialsWithLinks });
 }
