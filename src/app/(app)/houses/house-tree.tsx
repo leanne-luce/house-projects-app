@@ -26,7 +26,7 @@ import {
   addDetail,
 } from "@/lib/actions";
 import { ROOM_GROUP_VALUES } from "@/db/schema";
-import type { details as detailsTable, houses as housesTable, lineItems as lineItemsTable, materialItems as materialItemsTable, rooms as roomsTable, housePaletteColors as housePaletteColorsTable } from "@/db/schema";
+import type { details as detailsTable, houses as housesTable, lineItems as lineItemsTable, materialItems as materialItemsTable, rooms as roomsTable, housePaletteColors as housePaletteColorsTable, detailPaletteColors as detailPaletteColorsTable } from "@/db/schema";
 import { PaletteSection } from "./palette-section";
 
 type House = typeof housesTable.$inferSelect;
@@ -35,6 +35,7 @@ type Detail = typeof detailsTable.$inferSelect;
 type MaterialItem = typeof materialItemsTable.$inferSelect;
 type LineItem = typeof lineItemsTable.$inferSelect;
 type PaletteColor = typeof housePaletteColorsTable.$inferSelect;
+type DetailPaletteColorLink = typeof detailPaletteColorsTable.$inferSelect;
 type RoomGroup = (typeof ROOM_GROUP_VALUES)[number];
 
 const ROOM_GROUP_LABEL: Record<RoomGroup, string> = {
@@ -64,6 +65,7 @@ export function HouseTree({
   materialItems,
   lineItems,
   paletteColors,
+  detailPaletteColors,
 }: {
   houses: House[];
   rooms: Room[];
@@ -71,6 +73,7 @@ export function HouseTree({
   materialItems: MaterialItem[];
   lineItems: LineItem[];
   paletteColors: PaletteColor[];
+  detailPaletteColors: DetailPaletteColorLink[];
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(houses.map((h) => h.id)));
   // Rooms are collapsible too, independent of the house they're in — keyed
@@ -132,6 +135,10 @@ export function HouseTree({
         const houseRooms = rooms.filter((r) => r.houseId === h.id);
         const directDetails = detailsDirectOnHouse(details, h.id);
         const houseColors = paletteColors.filter((c) => c.houseId === h.id);
+        const houseColorLinks = detailPaletteColors.filter((l) =>
+          houseColors.some((c) => c.id === l.paletteColorId)
+        );
+        const houseAllDetails = details.filter((d) => d.houseId === h.id);
         const delta = budgetDeltaLabel(rollup.actual, rollup.rough);
 
         const renderRoomCard = (r: Room) => {
@@ -244,7 +251,12 @@ export function HouseTree({
 
             {open ? (
               <div className="house-body">
-                <PaletteSection houseId={h.id} colors={houseColors} />
+                <PaletteSection
+                  houseId={h.id}
+                  colors={houseColors}
+                  colorLinks={houseColorLinks}
+                  details={houseAllDetails}
+                />
 
                 {ROOM_GROUP_VALUES.map((g) => {
                   const groupRooms = houseRooms.filter((r) => ((r.group as RoomGroup) || "interior") === g);

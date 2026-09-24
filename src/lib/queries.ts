@@ -20,19 +20,22 @@ import {
   receiptLineItems,
   assets,
   housePaletteColors,
+  detailPaletteColors,
 } from "@/db/schema";
 import { asc, desc } from "drizzle-orm";
 import { photosForDetail, inspirationForDetail } from "./derived";
 
 export async function getHousesTreeData() {
-  const [housesRows, roomsRows, detailsRows, materialsRows, lineItemsRows, paletteColorRows] = await Promise.all([
-    db.select().from(houses).orderBy(asc(houses.createdAt)),
-    db.select().from(rooms).orderBy(asc(rooms.createdAt)),
-    db.select().from(details).orderBy(asc(details.createdAt)),
-    db.select().from(materialItems),
-    db.select().from(lineItems),
-    db.select().from(housePaletteColors).orderBy(asc(housePaletteColors.createdAt)),
-  ]);
+  const [housesRows, roomsRows, detailsRows, materialsRows, lineItemsRows, paletteColorRows, colorLinkRows] =
+    await Promise.all([
+      db.select().from(houses).orderBy(asc(houses.createdAt)),
+      db.select().from(rooms).orderBy(asc(rooms.createdAt)),
+      db.select().from(details).orderBy(asc(details.createdAt)),
+      db.select().from(materialItems),
+      db.select().from(lineItems),
+      db.select().from(housePaletteColors).orderBy(asc(housePaletteColors.createdAt)),
+      db.select().from(detailPaletteColors),
+    ]);
   return {
     houses: housesRows,
     rooms: roomsRows,
@@ -40,6 +43,7 @@ export async function getHousesTreeData() {
     materialItems: materialsRows,
     lineItems: lineItemsRows,
     paletteColors: paletteColorRows,
+    detailPaletteColors: colorLinkRows,
   };
 }
 
@@ -60,6 +64,8 @@ export async function getDetailPageData(detailId: string) {
     allReceiptLineItems,
     allReceipts,
     allAssets,
+    allPaletteColors,
+    allDetailPaletteColorLinks,
   ] = await Promise.all([
     db.select().from(houses),
     db.select().from(rooms),
@@ -76,6 +82,8 @@ export async function getDetailPageData(detailId: string) {
     db.select().from(receiptLineItems),
     db.select().from(receipts),
     db.select().from(assets),
+    db.select().from(housePaletteColors).orderBy(asc(housePaletteColors.createdAt)),
+    db.select().from(detailPaletteColors),
   ]);
   const detail = detailRows.find((d) => d.id === detailId) || null;
   return {
@@ -95,6 +103,8 @@ export async function getDetailPageData(detailId: string) {
       allReceipts.map((r) => [r.id, r.uploadedAt ? r.uploadedAt.toISOString() : null])
     ),
     contentTypeByAssetId: Object.fromEntries(allAssets.map((a) => [a.id, a.contentType])),
+    housePaletteColors: detail ? allPaletteColors.filter((c) => c.houseId === detail.houseId) : [],
+    detailPaletteColors: allDetailPaletteColorLinks.filter((l) => l.detailId === detailId),
   };
 }
 

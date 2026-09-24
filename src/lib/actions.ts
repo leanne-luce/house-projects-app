@@ -30,6 +30,7 @@ import {
   ROOM_GROUP_VALUES,
   housePaletteColors,
   PAINT_FINISH_VALUES,
+  detailPaletteColors,
 } from "@/db/schema";
 
 import { eq, and, inArray } from "drizzle-orm";
@@ -68,6 +69,7 @@ async function cleanupDetailChildren(tx: Parameters<Parameters<typeof db.transac
   await tx.delete(lineItems).where(eq(lineItems.detailId, detailId));
   await tx.delete(checklistItems).where(eq(checklistItems.detailId, detailId));
   await tx.delete(paletteSwatches).where(eq(paletteSwatches.detailId, detailId));
+  await tx.delete(detailPaletteColors).where(eq(detailPaletteColors.detailId, detailId));
 
   // A photo "owned" by this detail (progressPhotos.detailId) may also be
   // linked to OTHER details via progressPhotoDetails (that's the whole
@@ -265,7 +267,42 @@ export async function updatePaletteColor(id: string, patch: Partial<PaletteColor
 }
 
 export async function deletePaletteColor(id: string) {
-  await db.delete(housePaletteColors).where(eq(housePaletteColors.id, id));
+  await db.transaction(async (tx) => {
+    await tx.delete(detailPaletteColors).where(eq(detailPaletteColors.paletteColorId, id));
+    await tx.delete(housePaletteColors).where(eq(housePaletteColors.id, id));
+  });
+  revalidateEverything();
+}
+
+// ---------- Detail <-> palette color links ----------
+
+export async function linkPaletteColorToDetail(detailId: string, paletteColorId: string, role?: string | null) {
+  const [detail] = await db.select({ houseId: details.houseId }).from(details).where(eq(details.id, detailId));
+  const [color] = await db
+    .select({ houseId: housePaletteColors.houseId })
+    .from(housePaletteColors)
+    .where(eq(housePaletteColors.id, paletteColorId));
+  if (!detail || !color || detail.houseId !== color.houseId) {
+    throw new Error("That color doesn't belong to this detail's house.");
+  }
+  const [row] = await db
+    .insert(detailPaletteColors)
+    .values({ detailId, paletteColorId, role: role?.trim() || null })
+    .returning();
+  revalidateEverything();
+  return row;
+}
+
+export async function updateDetailPaletteColorRole(linkId: string, role: string | null) {
+  await db
+    .update(detailPaletteColors)
+    .set({ role: role?.trim() || null })
+    .where(eq(detailPaletteColors.id, linkId));
+  revalidateEverything();
+}
+
+export async function unlinkPaletteColorFromDetail(linkId: string) {
+  await db.delete(detailPaletteColors).where(eq(detailPaletteColors.id, linkId));
   revalidateEverything();
 }
 

@@ -23,6 +23,7 @@ import { Panel } from "@/components/panel";
 import { ReferencesPanel } from "./references-panel";
 import { NotesPanel } from "./notes-panel";
 import { PalettePanel } from "./palette-panel";
+import { ColorsSection } from "./colors-section";
 import { ProgressPhotosPanel } from "./progress-photos-panel";
 import { UnassignedReceiptItemsPanel } from "./unassigned-receipt-items-panel";
 import type {
@@ -36,6 +37,8 @@ import type {
   paletteSwatches as paletteSwatchesTable,
   progressPhotos as progressPhotosTable,
   receiptLineItems as receiptLineItemsTable,
+  housePaletteColors as housePaletteColorsTable,
+  detailPaletteColors as detailPaletteColorsTable,
 } from "@/db/schema";
 
 type Detail = typeof detailsTable.$inferSelect;
@@ -48,6 +51,8 @@ type BoardImage = typeof boardImagesTable.$inferSelect;
 type Swatch = typeof paletteSwatchesTable.$inferSelect;
 type ProgressPhoto = typeof progressPhotosTable.$inferSelect;
 type ReceiptLineItem = typeof receiptLineItemsTable.$inferSelect;
+type PaletteColor = typeof housePaletteColorsTable.$inferSelect;
+type DetailPaletteColorLink = typeof detailPaletteColorsTable.$inferSelect;
 
 const STATUS_LABEL: Record<string, string> = {
   not_started: "Not started",
@@ -116,6 +121,8 @@ export function DetailPageClient({
   pendingReceiptItems,
   receiptDates,
   contentTypeByAssetId,
+  housePaletteColors,
+  detailPaletteColors,
 }: {
   detail: Detail;
   houses: House[];
@@ -129,6 +136,8 @@ export function DetailPageClient({
   pendingReceiptItems: ReceiptLineItem[];
   receiptDates: Record<string, string | null>;
   contentTypeByAssetId: Record<string, string | null>;
+  housePaletteColors: PaletteColor[];
+  detailPaletteColors: DetailPaletteColorLink[];
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -272,6 +281,8 @@ export function DetailPageClient({
         />
 
         <PalettePanel detailId={detail.id} swatches={paletteSwatches} />
+
+        <ColorsSection detailId={detail.id} houseColors={housePaletteColors} links={detailPaletteColors} />
 
         <UnassignedReceiptItemsPanel detailId={detail.id} items={pendingReceiptItems} receiptDates={receiptDates} />
 

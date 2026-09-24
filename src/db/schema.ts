@@ -290,6 +290,26 @@ export const paletteSwatches = pgTable("palette_swatches", {
   createdAt: createdAt(),
 });
 
+// Links a Detail to one of its house's palette colors (housePaletteColors
+// above) — distinct from paletteSwatches above, which is an older, simpler
+// per-Detail freeform swatch list with no link to a house's palette. A
+// Detail can link the same color more than once (e.g. the same white used
+// for both "trim" and "ceiling" gets two rows). `role` is free text on
+// purpose ("such as" walls/trim/ceiling/cabinets in the request that added
+// this — examples, not an enum), so it's just a suggestion set in the UI,
+// not a CHECK constraint here.
+export const detailPaletteColors = pgTable("detail_palette_colors", {
+  id: id(),
+  detailId: text("detail_id")
+    .notNull()
+    .references(() => details.id),
+  paletteColorId: text("palette_color_id")
+    .notNull()
+    .references(() => housePaletteColors.id),
+  role: text("role"),
+  createdAt: createdAt(),
+});
+
 export const PHASE_VALUES = ["before", "during", "after"] as const;
 
 export const progressPhotos = pgTable(

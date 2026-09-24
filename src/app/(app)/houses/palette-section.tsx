@@ -4,9 +4,11 @@ import { useState, useTransition } from "react";
 import { Modal } from "@/components/modal";
 import { addPaletteColor, updatePaletteColor, deletePaletteColor } from "@/lib/actions";
 import { PAINT_FINISH_VALUES } from "@/db/schema";
-import type { housePaletteColors as housePaletteColorsTable } from "@/db/schema";
+import type { housePaletteColors as housePaletteColorsTable, detailPaletteColors as detailPaletteColorsTable, details as detailsTable } from "@/db/schema";
 
 type PaletteColor = typeof housePaletteColorsTable.$inferSelect;
+type DetailPaletteColorLink = typeof detailPaletteColorsTable.$inferSelect;
+type Detail = typeof detailsTable.$inferSelect;
 type PaintFinish = (typeof PAINT_FINISH_VALUES)[number];
 
 const FINISH_LABEL: Record<PaintFinish, string> = {
@@ -18,44 +20,69 @@ const FINISH_LABEL: Record<PaintFinish, string> = {
   gloss: "Gloss",
 };
 
-export function PaletteSection({ houseId, colors }: { houseId: string; colors: PaletteColor[] }) {
+export function PaletteSection({
+  houseId,
+  colors,
+  colorLinks,
+  details,
+}: {
+  houseId: string;
+  colors: PaletteColor[];
+  colorLinks: DetailPaletteColorLink[];
+  details: Detail[];
+}) {
   const [, startTransition] = useTransition();
   const [modalState, setModalState] = useState<{ mode: "add" } | { mode: "edit"; color: PaletteColor } | null>(null);
+
+  function handleDelete(c: PaletteColor) {
+    const usedBy = colorLinks
+      .filter((l) => l.paletteColorId === c.id)
+      .map((l) => details.find((d) => d.id === l.detailId)?.name)
+      .filter((name): name is string => Boolean(name));
+
+    const message = usedBy.length
+      ? `"${c.name}" is used on ${usedBy.length} detail${usedBy.length === 1 ? "" : "s"}: ${usedBy.join(", ")}.\n\nDelete it anyway? Those links will be removed too.`
+      : `Delete "${c.name}" from this palette?`;
+
+    if (confirm(message)) {
+      startTransition(() => deletePaletteColor(c.id));
+    }
+  }
 
   return (
     <div className="room-group">
       <div className="room-group-title">Color Palette</div>
       {colors.length ? (
         <div className="palette-color-grid">
-          {colors.map((c) => (
-            <div className="palette-color-card" key={c.id}>
-              <div className="palette-color-swatch" style={{ background: c.hex }} />
-              <div className="palette-color-body">
-                <div className="palette-color-name">{c.name}</div>
-                {c.brand || c.colorCode ? (
-                  <div className="palette-color-meta">{[c.brand, c.colorCode].filter(Boolean).join(" · ")}</div>
-                ) : null}
-                <span className="palette-color-finish">{FINISH_LABEL[c.finish as PaintFinish] || c.finish}</span>
-                {c.whereUsed ? <div className="palette-color-where">{c.whereUsed}</div> : null}
-                <div className="palette-color-actions">
-                  <button className="link-btn" onClick={() => setModalState({ mode: "edit", color: c })}>
-                    Edit
-                  </button>
-                  <button
-                    className="icon-btn"
-                    title="Delete color"
-                    onClick={() => {
-                      if (confirm(`Delete "${c.name}" from this palette?`)) {
-                        startTransition(() => deletePaletteColor(c.id));
-                      }
-                    }}
-                  >
-                    ✕
-                  </button>
+          {colors.map((c) => {
+            const usageCount = colorLinks.filter((l) => l.paletteColorId === c.id).length;
+            return (
+              <div className="palette-color-card" key={c.id}>
+                <div className="palette-color-swatch" style={{ background: c.hex }} />
+                <div className="palette-color-body">
+                  <div className="palette-color-name">{c.name}</div>
+                  {c.brand || c.colorCode ? (
+                    <div className="palette-color-meta">{[c.brand, c.colorCode].filter(Boolean).join(" · ")}</div>
+                  ) : null}
+                  <span className="palette-color-finish">{FINISH_LABEL[c.finish as PaintFinish] || c.finish}</span>
+                  {c.whereUsed ? <div className="palette-color-where">{c.whereUsed}</div> : null}
+                  {usageCount ? (
+                    <div className="palette-color-usage">
+                      Used in {usageCount} detail{usageCount === 1 ? "" : "s"}
+                    </div>
+                  ) : null}
+                  <div className="palette-color-actions">
+                    <button className="link-btn" onClick={() => setModalState({ mode: "edit", color: c })}>
+                      Edit
+                    </button>
+                    <button className="icon-btn" title="Delete color" onClick={() => handleDelete(c)}>
+                      ✕
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="empty-note">No colors logged yet.</div>

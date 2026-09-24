@@ -15,9 +15,16 @@ import { sql } from "drizzle-orm";
 // src/app/api/uploads/[...path]/route.ts.
 //
 // Covers, in order added: rooms.group (Interior/Exterior/Utility), then
-// house_palette_colors (Color Palette section).
+// house_palette_colors (Color Palette section), then detail_palette_colors
+// (Detail page Colors section) plus its one-time backfill from the older
+// paletteSwatches freeform swatches — matched to a house palette color by
+// name substring; anything that doesn't match (e.g. a swatch labeled for a
+// material like "Cedar" that was never logged as a paint color) is left
+// alone in paletteSwatches, nothing is dropped. The backfill's NOT EXISTS
+// guard makes it safe to run again without creating duplicate links.
 //
-// DELETE THIS ROUTE once /houses is confirmed working in production.
+// DELETE THIS ROUTE once /houses and /detail/[id] are confirmed working in
+// production.
 export async function GET() {
   await db.execute(sql`ALTER TABLE "rooms" ADD COLUMN IF NOT EXISTS "group" text NOT NULL DEFAULT 'interior'`);
 
@@ -55,8 +62,43 @@ export async function GET() {
     )
   `);
 
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "detail_palette_colors" (
+      "id" text PRIMARY KEY,
+      "detail_id" text NOT NULL REFERENCES "details"("id"),
+      "palette_color_id" text NOT NULL REFERENCES "house_palette_colors"("id"),
+      "role" text,
+      "created_at" timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+
+  const backfilled = await db.execute(sql`
+    INSERT INTO detail_palette_colors (id, detail_id, palette_color_id, role, created_at)
+    SELECT gen_random_uuid()::text, ps.detail_id, hpc.id, NULL, now()
+    FROM palette_swatches ps
+    JOIN details d ON d.id = ps.detail_id
+    JOIN house_palette_colors hpc
+      ON hpc.house_id = d.house_id
+      AND ps.label ILIKE '%' || hpc.name || '%'
+    WHERE NOT EXISTS (
+      SELECT 1 FROM detail_palette_colors dpc
+      WHERE dpc.detail_id = ps.detail_id AND dpc.palette_color_id = hpc.id
+    )
+    RETURNING detail_id, palette_color_id
+  `);
+
+  const unmatchedSwatches = await db.execute(sql`
+    SELECT d.name AS detail_name, ps.label, ps.hex
+    FROM palette_swatches ps
+    JOIN details d ON d.id = ps.detail_id
+    WHERE NOT EXISTS (
+      SELECT 1 FROM house_palette_colors hpc
+      WHERE hpc.house_id = d.house_id AND ps.label ILIKE '%' || hpc.name || '%'
+    )
+  `);
+
   const rooms = await db.execute(sql`SELECT name, "group" FROM rooms ORDER BY created_at`);
   const paletteColors = await db.execute(sql`SELECT name, hex FROM house_palette_colors ORDER BY created_at`);
 
-  return Response.json({ ok: true, rooms, paletteColors });
+  return Response.json({ ok: true, rooms, paletteColors, backfilled, unmatchedSwatches });
 }
