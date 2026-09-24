@@ -563,6 +563,28 @@
   .furniture-meta { font-family:var(--font-sans); font-size:0.78rem; color:var(--text-muted); margin-top:0.3rem; }
   .furniture-cost { font-family:var(--font-display); font-size:1.0625rem; color:var(--accent-strong); margin-top:0.5rem; }
 
+  /* House page — Color Palette. Compact cards, a swatch strip on top so the
+     color reads at a glance, details below kept small since a paint log
+     entry is mostly metadata around one visual fact. */
+  .palette-color-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(9.5rem,1fr)); gap:0.7rem; }
+  .palette-color-card { background:var(--surface); border:1px solid var(--border); overflow:hidden; }
+  .palette-color-swatch { width:100%; height:3.25rem; border-bottom:1px solid var(--border); }
+  .palette-color-body { padding:0.65rem 0.75rem 0.75rem; }
+  .palette-color-name { font-family:var(--font-sans); font-weight:500; font-size:0.875rem; }
+  .palette-color-meta { font-family:var(--font-sans); font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem; }
+  .palette-color-finish {
+    display:inline-block; margin-top:0.4rem; font-family:var(--font-sans); font-size:0.65rem; font-weight:500;
+    text-transform:uppercase; letter-spacing:0.08em; padding:0.15rem 0.5rem; border-radius:999px;
+    background:var(--surface-2); color:var(--text-muted);
+  }
+  .palette-color-where { font-family:var(--font-sans); font-size:0.75rem; color:var(--text-faint); margin-top:0.4rem; font-style:italic; }
+  .palette-color-actions { display:flex; align-items:center; justify-content:space-between; margin-top:0.5rem; }
+
+  /* Add/edit color modal — the picker and the typed/pasted hex field share
+     one row and stay in sync (same controlled value from the parent). */
+  .palette-hex-row { display:flex; gap:0.5rem; align-items:stretch; }
+  .palette-hex-swatch-input { width:2.75rem; flex-shrink:0; padding:0.2rem; cursor:pointer; }
+
 
 .login-wrap {
   min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem;

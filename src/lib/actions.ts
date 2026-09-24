@@ -28,6 +28,8 @@ import {
   receipts,
   receiptLineItems,
   ROOM_GROUP_VALUES,
+  housePaletteColors,
+  PAINT_FINISH_VALUES,
 } from "@/db/schema";
 
 import { eq, and, inArray } from "drizzle-orm";
@@ -37,6 +39,8 @@ import { runOcr, extractPdfText, parseReceiptLines } from "./ocr";
 import crypto from "node:crypto";
 
 type RoomGroup = (typeof ROOM_GROUP_VALUES)[number];
+type PaintFinish = (typeof PAINT_FINISH_VALUES)[number];
+const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 
 function revalidateEverything() {
   // Personal-scale app, cheap to over-invalidate rather than track exactly
@@ -140,6 +144,7 @@ export async function deleteHouse(id: string) {
       );
     }
     await tx.delete(rooms).where(eq(rooms.houseId, id));
+    await tx.delete(housePaletteColors).where(eq(housePaletteColors.houseId, id));
 
     // Any inspiration image this house owns — assigned or not — goes with
     // it; every detail/room it could have been tagged to is already gone.
@@ -185,6 +190,82 @@ export async function deleteRoom(id: string) {
     await tx.delete(boardImageRooms).where(eq(boardImageRooms.roomId, id));
     await tx.delete(rooms).where(eq(rooms.id, id));
   });
+  revalidateEverything();
+}
+
+// ---------- House palette colors ----------
+
+type PaletteColorInput = {
+  name: string;
+  hex?: string;
+  brand?: string | null;
+  colorCode?: string | null;
+  finish?: PaintFinish;
+  whereUsed?: string | null;
+  notes?: string | null;
+};
+
+function normalizeHex(hex: string | undefined): string | undefined {
+  if (!hex) return undefined;
+  let v = hex.trim();
+  if (!v.startsWith("#")) v = `#${v}`;
+  // Expand shorthand #rgb -> #rrggbb so pasted/typed shorthand hex still validates.
+  if (/^#[0-9A-Fa-f]{3}$/.test(v)) {
+    v = `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`;
+  }
+  return v;
+}
+
+function validatePaletteColorInput(input: PaletteColorInput, hex: string | undefined) {
+  if (!input.name.trim()) throw new Error("A color needs a name.");
+  if (hex && !HEX_RE.test(hex)) throw new Error(`Invalid hex color: ${input.hex}`);
+  if (input.finish && !PAINT_FINISH_VALUES.includes(input.finish)) {
+    throw new Error(`Invalid finish: ${input.finish}`);
+  }
+}
+
+export async function addPaletteColor(houseId: string, input: PaletteColorInput) {
+  const hex = normalizeHex(input.hex);
+  validatePaletteColorInput(input, hex);
+  const [row] = await db
+    .insert(housePaletteColors)
+    .values({
+      houseId,
+      name: input.name.trim(),
+      hex: hex || "#9D8B5E",
+      brand: input.brand?.trim() || null,
+      colorCode: input.colorCode?.trim() || null,
+      finish: input.finish || "flat",
+      whereUsed: input.whereUsed?.trim() || null,
+      notes: input.notes?.trim() || null,
+    })
+    .returning();
+  revalidateEverything();
+  return row;
+}
+
+export async function updatePaletteColor(id: string, patch: Partial<PaletteColorInput>) {
+  const hex = "hex" in patch ? normalizeHex(patch.hex) : undefined;
+  if (patch.name !== undefined || hex !== undefined || patch.finish !== undefined) {
+    validatePaletteColorInput({ name: patch.name ?? "placeholder", ...patch }, hex);
+  }
+  await db
+    .update(housePaletteColors)
+    .set({
+      ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
+      ...(hex !== undefined ? { hex } : {}),
+      ...(patch.brand !== undefined ? { brand: patch.brand?.trim() || null } : {}),
+      ...(patch.colorCode !== undefined ? { colorCode: patch.colorCode?.trim() || null } : {}),
+      ...(patch.finish !== undefined ? { finish: patch.finish } : {}),
+      ...(patch.whereUsed !== undefined ? { whereUsed: patch.whereUsed?.trim() || null } : {}),
+      ...(patch.notes !== undefined ? { notes: patch.notes?.trim() || null } : {}),
+    })
+    .where(eq(housePaletteColors.id, id));
+  revalidateEverything();
+}
+
+export async function deletePaletteColor(id: string) {
+  await db.delete(housePaletteColors).where(eq(housePaletteColors.id, id));
   revalidateEverything();
 }
 

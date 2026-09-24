@@ -12,6 +12,7 @@ export default async function HousesPage() {
       details={data.details}
       materialItems={data.materialItems}
       lineItems={data.lineItems}
+      paletteColors={data.paletteColors}
     />
   );
 }

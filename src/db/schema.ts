@@ -51,6 +51,39 @@ export const houses = pgTable("houses", {
   createdAt: createdAt(),
 });
 
+export const PAINT_FINISH_VALUES = ["flat", "matte", "eggshell", "satin", "semi-gloss", "gloss"] as const;
+
+// House-level paint/color log — distinct from paletteSwatches below, which
+// is a simpler per-Detail swatch list. This one belongs to a house (one
+// property's whole palette), carries the fuller set of fields a real paint
+// log needs (brand, color code, finish, where it's used), and is designed
+// so a future `details` reference can point at a row here — no such link
+// exists yet, this table just gives it a stable id to point at later.
+export const housePaletteColors = pgTable(
+  "house_palette_colors",
+  {
+    id: id(),
+    houseId: text("house_id")
+      .notNull()
+      .references(() => houses.id),
+    name: text("name").notNull(),
+    hex: text("hex").notNull().default("#9D8B5E"),
+    brand: text("brand"),
+    colorCode: text("color_code"),
+    finish: text("finish").notNull().default("flat"),
+    whereUsed: text("where_used"),
+    notes: text("notes"),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    check("house_palette_color_hex_check", sql`${table.hex} ~ '^#[0-9A-Fa-f]{6}$'`),
+    check(
+      "house_palette_color_finish_check",
+      sql`${table.finish} in ('flat','matte','eggshell','satin','semi-gloss','gloss')`
+    ),
+  ]
+);
+
 export const ROOM_GROUP_VALUES = ["interior", "exterior", "utility"] as const;
 
 export const rooms = pgTable(

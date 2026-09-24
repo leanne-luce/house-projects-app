@@ -19,17 +19,19 @@ import {
   receipts,
   receiptLineItems,
   assets,
+  housePaletteColors,
 } from "@/db/schema";
 import { asc, desc } from "drizzle-orm";
 import { photosForDetail, inspirationForDetail } from "./derived";
 
 export async function getHousesTreeData() {
-  const [housesRows, roomsRows, detailsRows, materialsRows, lineItemsRows] = await Promise.all([
+  const [housesRows, roomsRows, detailsRows, materialsRows, lineItemsRows, paletteColorRows] = await Promise.all([
     db.select().from(houses).orderBy(asc(houses.createdAt)),
     db.select().from(rooms).orderBy(asc(rooms.createdAt)),
     db.select().from(details).orderBy(asc(details.createdAt)),
     db.select().from(materialItems),
     db.select().from(lineItems),
+    db.select().from(housePaletteColors).orderBy(asc(housePaletteColors.createdAt)),
   ]);
   return {
     houses: housesRows,
@@ -37,6 +39,7 @@ export async function getHousesTreeData() {
     details: detailsRows,
     materialItems: materialsRows,
     lineItems: lineItemsRows,
+    paletteColors: paletteColorRows,
   };
 }
 
