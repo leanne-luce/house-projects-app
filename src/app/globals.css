@@ -358,30 +358,61 @@
   ::placeholder { color: var(--text-faint); }
 
   /* Detail page */
-  .detail-page { animation: db-fade .18s ease; }
+  .detail-page {
+    animation: db-fade .18s ease;
+    /* Spacing scale, scoped here only — nothing outside .detail-page reads
+       these, so Houses/Overview/modals etc. are untouched. Every
+       margin/padding/gap below the Detail page rules resolves to one of
+       these six steps (4/8/12/16/24/32px), replacing what used to be ~15
+       one-off rem values (0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.65,
+       0.7, 0.75, 0.9, 1.1, 1.2, 1.25, 1.75rem) scattered across this page's
+       CSS and inline JSX styles. */
+    --db-space-1: 0.25rem; /* 4px */
+    --db-space-2: 0.5rem;  /* 8px */
+    --db-space-3: 0.75rem; /* 12px */
+    --db-space-4: 1rem;    /* 16px */
+    --db-space-5: 1.5rem;  /* 24px */
+    --db-space-6: 2rem;    /* 32px */
+  }
   @keyframes db-fade { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
-  .db-backbar { margin-bottom:0.7rem; }
+  .db-backbar { margin-bottom:var(--db-space-2); }
   .db-backbar button {
-    background:none; border:none; color:var(--accent-strong); font-family: var(--font-sans); font-weight:500; font-size:0.875rem; letter-spacing:0.03em; cursor:pointer; padding:0.2rem 0;
+    background:none; border:none; color:var(--accent-strong); font-family: var(--font-sans); font-weight:500; font-size:0.875rem; letter-spacing:0.03em; cursor:pointer; padding:var(--db-space-1) 0;
   }
   .db-hero {
-    position:relative; overflow:hidden; border-radius:0; padding:1.75rem 1.75rem 1.75rem 2rem; margin-bottom:1.2rem;
+    position:relative; overflow:hidden; border-radius:0;
+    padding:var(--db-space-5);
+    margin-bottom:var(--db-space-4);
     background: transparent;
     border:1px solid var(--border); box-shadow:none;
   }
+  /* Full-width accent bar along the bottom of the hero, colored by status —
+     replaces the old thin left-side vertical bar now that the hero has a
+     right-aligned stat row to balance against instead. Thicker (5px) so it
+     reads as a real divider, not a hairline. */
   .db-hero::before {
-    content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--status-color, var(--accent));
+    content:""; position:absolute; left:0; right:0; bottom:0; height:5px; background:var(--status-color, var(--accent));
   }
-  .db-breadcrumb { font-family: var(--font-sans); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-faint); margin-bottom:0.25rem; }
+  .db-hero-top { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--db-space-5); flex-wrap:wrap; margin-bottom:var(--db-space-4); }
+  .db-hero-top-left { min-width:0; flex:1 1 auto; }
+  .db-breadcrumb { font-family: var(--font-sans); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-faint); margin-bottom:var(--db-space-1); }
   .db-name-input {
-    font-family: var(--font-display); font-size:1.875rem; font-weight:400; letter-spacing:-0.02em; line-height:1.15; border:none; background:transparent; width:100%; padding:0.1rem 0; color:var(--text);
+    font-family: var(--font-display); font-size:2rem; font-weight:400; letter-spacing:-0.02em; line-height:1.15; border:none; background:transparent; width:100%; padding:0.1rem 0; color:var(--text);
   }
+  /* Estimate / Spent / Over(or Left) — sized close to the title itself so
+     it reads as a second headline, not a footnote, matching the reference
+     layout's equal visual weight between name and numbers. */
+  .db-hero-stats { display:flex; gap:var(--db-space-6); flex-shrink:0; padding-top:var(--db-space-1); }
+  .db-hero-stat { text-align:right; }
+  .db-hero-stat-label { font-family: var(--font-sans); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-faint); margin-bottom:var(--db-space-2); }
+  .db-hero-stat-value { font-family: var(--font-display); font-size:1.875rem; font-weight:400; letter-spacing:-0.02em; color:var(--text); white-space:nowrap; }
+  .db-hero-stat-value.over { color:var(--danger); }
   /* The hero meta reads as one sentence — status, timeframe, target date,
      budget — rather than a row of form chrome. Controls are borderless and
      inherit the surrounding text color until hovered/focused, per the
      "planning layout" pass's "ink a step lighter" idea applied to the hero
      itself: nothing here shouts except the numbers. */
-  .db-meta { display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap; margin-top:0.6rem; font-family: var(--font-sans); font-size:0.9375rem; color:var(--text-muted); }
+  .db-meta { display:flex; align-items:center; gap:var(--db-space-2); flex-wrap:wrap; margin-top:var(--db-space-2); font-family: var(--font-sans); font-size:0.9375rem; color:var(--text-muted); }
   .db-meta-sep { color:var(--text-faint); }
   .db-meta select, .db-meta input:not([type="checkbox"]) {
     width:auto; border:none; background:transparent; padding:0.1rem 0.1rem; font-family:inherit; font-size:inherit; color:inherit; cursor:pointer;
@@ -390,7 +421,7 @@
   .db-meta select:focus, .db-meta input:focus { outline:1px solid var(--border-strong); background:var(--surface); color:var(--text); }
   .db-meta-budget { font-family: var(--font-display); color:var(--text); }
   .db-meta-budget.over { color:var(--danger); }
-  .db-meta-furniture { display:flex; align-items:center; gap:0.3rem; margin-left:auto; font-size:0.8125rem; cursor:pointer; }
+  .db-meta-furniture { display:flex; align-items:center; gap:var(--db-space-1); margin-left:auto; font-size:0.8125rem; cursor:pointer; }
 
   .panel-grid { display:grid; grid-template-columns:1fr; gap:1rem; margin-top:1rem; }
   @media (min-width:760px){
@@ -430,8 +461,28 @@
   .detail-page .list-item:last-of-type { border-bottom:none; }
   .detail-page .list-item-main, .detail-page .list-item-sub { color:var(--text-muted); }
 
+  /* Tightened spacing pass — cards and rows on the shared .panel-card/
+     .list-item/.field bases were sized for a single roomy card (Overview's
+     use of the same classes); this page stacks a dozen of them, so the same
+     padding compounds fast. Scoped to .detail-page so Overview/Houses/
+     Receipts keep their existing spacing on those shared classes. */
+  .detail-page .panel-card { padding:var(--db-space-4); }
+  .detail-page .panel-card summary { margin-bottom:var(--db-space-3); gap:var(--db-space-2); }
+  .detail-page .panel-card:not([open]) summary { margin-bottom:0; }
+  .detail-page .list-item { padding:var(--db-space-2) var(--db-space-3); }
+  .detail-page .list-item-sub { margin-top:var(--db-space-1); }
+  .detail-page .list-item-meta { margin-top:var(--db-space-1); gap:var(--db-space-2); }
+  .detail-page .field { margin-bottom:var(--db-space-2); }
+  .detail-page label.field-label { margin-bottom:var(--db-space-1); }
+  .detail-page .field-row { gap:var(--db-space-2); }
+  .detail-page .add-row-btns { margin-top:var(--db-space-2); }
+  .detail-page .empty-note { padding:var(--db-space-1) 0; }
+  /* Delete "✕" buttons on rows are otherwise ~26px — bump to the ~40px
+     minimum tap target without changing the glyph's visual size. */
+  .detail-page button.icon-btn { min-width:2.5rem; min-height:2.5rem; padding:0; display:inline-flex; align-items:center; justify-content:center; }
+
   /* Money panel */
-  .db-money-row { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.7rem; }
+  .db-money-row { display:flex; align-items:center; gap:var(--db-space-3); margin-bottom:var(--db-space-2); }
   .db-money-label { width:5.5rem; flex-shrink:0; font-family: var(--font-sans); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-faint); }
   .db-money-bar { flex:1; height:0.4rem; background:var(--sand); overflow:hidden; }
   .db-money-bar-fill { height:100%; transition:width .35s ease; }
@@ -439,11 +490,11 @@
     min-width:4.5rem; text-align:right; font-family: var(--font-display); font-size:1.0625rem; font-weight:400;
     border:none; background:transparent; padding:0; color:var(--text);
   }
-  .db-money-summary { font-family: var(--font-sans); font-size:0.8125rem; color:var(--text-muted); margin-top:0.6rem; display:flex; align-items:center; gap:0.7rem; flex-wrap:wrap; }
+  .db-money-summary { font-family: var(--font-sans); font-size:0.8125rem; color:var(--text-muted); margin-top:var(--db-space-2); display:flex; align-items:center; gap:var(--db-space-3); flex-wrap:wrap; }
   .db-money-summary .link-btn { font-size:0.8125rem; }
 
   /* The sequence (checklist, redesigned) */
-  .db-seq-row { display:flex; align-items:flex-start; gap:0.65rem; padding:0.65rem 0 0.65rem 0.65rem; margin-left:-0.65rem; border-left:2px solid transparent; border-bottom:1px solid var(--border); }
+  .db-seq-row { display:flex; align-items:flex-start; gap:var(--db-space-2); padding:var(--db-space-2) 0 var(--db-space-2) var(--db-space-2); margin-left:calc(-1 * var(--db-space-2)); border-left:2px solid transparent; border-bottom:1px solid var(--border); }
   .db-seq-row:last-of-type { border-bottom:none; }
   .db-seq-row.current { border-left-color:var(--danger); }
   .db-seq-num { font-family: var(--font-sans); font-size:0.78rem; color:var(--text-faint); width:1.3rem; flex-shrink:0; padding-top:0.2rem; }
@@ -456,7 +507,7 @@
   .db-seq-row.current .db-seq-date { color:var(--text); font-weight:500; }
   .db-seq-row input:focus { outline:1px solid var(--border-strong); background:var(--surface); }
   .db-seq-check { width:auto; flex-shrink:0; margin-top:0.2rem; accent-color: var(--accent-strong); }
-  .db-seq-footer { display:flex; justify-content:space-between; align-items:center; margin-top:0.7rem; font-family: var(--font-sans); font-size:0.8125rem; color:var(--text-muted); }
+  .db-seq-footer { display:flex; justify-content:space-between; align-items:center; margin-top:var(--db-space-2); font-family: var(--font-sans); font-size:0.8125rem; color:var(--text-muted); }
 
   /* Materials — status as a pill rather than a plain dropdown */
   .db-material-status {
@@ -471,7 +522,7 @@
   /* A material's product link — shown as the retailer name + icon, never
      the raw URL. The small text input beside it is only for correcting the
      auto-derived retailer name, not a second copy of the link. */
-  .material-link-row { display:flex; align-items:baseline; gap:0.5rem; margin-top:0.4rem; flex-wrap:wrap; }
+  .material-link-row { display:flex; align-items:baseline; gap:var(--db-space-2); margin-top:var(--db-space-1); flex-wrap:wrap; }
   .material-link { font-family: var(--font-sans); font-size:0.8125rem; font-weight:500; color:var(--accent-strong); text-decoration:none; }
   .material-link:hover { text-decoration:underline; }
   .material-retailer-input {
@@ -480,27 +531,105 @@
   }
   .material-retailer-input:focus { outline:1px solid var(--border-strong); background:var(--surface); padding:0.1rem 0.3rem; }
 
-  .db-mood-hint { font-family: var(--font-sans); font-size:0.8125rem; color:var(--text-muted); margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid var(--border); }
+  /* A compact number input embedded inline in a metadata line (Unassigned
+     receipts' Amount) rather than its own labeled field block. */
+  .db-inline-amount { width:5.5rem; flex-shrink:0; padding:var(--db-space-1) var(--db-space-2); font-size:0.8125rem; min-height:2.5rem; }
+
+  /* Panel header with a running total on the right ("Materials plan" +
+     "$3,800 planned", "Actual spend" + "$4,400") — the title prop becomes a
+     flex row instead of plain text; flex:1 lets it fill the summary's
+     remaining space (after the chevron) so justify-content can spread it. */
+  .db-panel-title-row { display:flex; align-items:baseline; justify-content:space-between; flex:1; gap:var(--db-space-2); }
+  .db-panel-title-total { font-family: var(--font-sans); font-weight:400; text-transform:none; letter-spacing:normal; color:var(--text-muted); font-size:0.8125rem; }
+
+  /* Materials — a real column table (Item/Qty/Rate/Total/Status) instead of
+     a stacked card per row. Header and rows are separate grids sharing the
+     same column template so they line up; inputs are borderless until
+     hovered/focused so they read as plain table cells (same idea as the
+     hero's .db-meta controls) while staying fully editable. */
+  .db-materials-head, .db-materials-row {
+    display:grid; grid-template-columns: 1fr 3.5rem 4.5rem 4.5rem 7rem 2.5rem;
+    column-gap:var(--db-space-2); align-items:center;
+  }
+  .db-materials-head {
+    font-family: var(--font-sans); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-faint);
+    padding-bottom:var(--db-space-2); border-bottom:1px solid var(--border); margin-bottom:var(--db-space-1);
+  }
+  .db-materials-head-num { text-align:right; }
+  .db-materials-row { padding:var(--db-space-2) 0; border-bottom:1px solid var(--border); }
+  .db-materials-row:last-of-type { border-bottom:none; }
+  .db-materials-cell-input {
+    border:none; background:transparent; padding:var(--db-space-1); width:100%; min-height:2.5rem; font-size:0.9375rem;
+  }
+  .db-materials-cell-input:hover, .db-materials-cell-input:focus { background:var(--surface-2); }
+  .db-materials-cell-input.num { text-align:right; font-size:0.875rem; }
+  .db-materials-cell-total { text-align:right; font-weight:600; color:var(--text); font-size:0.9375rem; }
+  .db-materials-cell-status { display:flex; align-items:center; justify-content:flex-end; }
+  .db-materials-link-toggle {
+    background:none; border:none; color:var(--accent-strong); font-family: var(--font-sans); font-size:0.75rem;
+    cursor:pointer; padding:0; margin-top:var(--db-space-1);
+  }
+  .db-materials-link-toggle:hover { opacity:0.7; }
+  .db-materials-link-input-row { display:flex; gap:var(--db-space-1); margin-top:var(--db-space-1); }
+  .db-materials-link-input-row input { flex:1; }
+
+  /* Actual spend rows — description+cost share a line, vendor+date share
+     the line below, both borderless-until-focus like the materials table. */
+  .db-spend-row-line { display:flex; align-items:center; gap:var(--db-space-2); }
+  .db-spend-row-line + .db-spend-row-line { margin-top:var(--db-space-1); }
+  .db-spend-cell-input {
+    flex:1; min-width:0; border:none; background:transparent; padding:var(--db-space-1); font-size:0.9375rem; min-height:2.5rem;
+  }
+  .db-spend-cell-input:hover, .db-spend-cell-input:focus { background:var(--surface-2); }
+  .db-spend-cell-input.num { flex:0 0 auto; width:6rem; text-align:right; }
+  .db-spend-cell-input.vendor { font-size:0.8125rem; color:var(--text-muted); }
+  .db-spend-cell-input.date { flex:0 0 auto; width:9rem; font-size:0.8125rem; color:var(--text-muted); }
+  .db-spend-footer {
+    display:flex; justify-content:space-between; margin-top:var(--db-space-3); padding-top:var(--db-space-2);
+    border-top:1px solid var(--border); font-family: var(--font-sans); font-size:0.8125rem; color:var(--text-muted);
+  }
+
+  @media (max-width: 600px) {
+    .db-materials-head { display:none; }
+    .db-materials-row { display:flex; flex-wrap:wrap; align-items:center; column-gap:var(--db-space-2); row-gap:var(--db-space-1); }
+    /* Base .db-materials-cell-input/select are width:100% for the desktop
+       grid; as wrapped flex items that would make every cell claim a full
+       line of its own. Give the item name that (its own line) and give
+       everything after it a content-sized width instead so qty/rate/total/
+       status/delete group together on the line below. */
+    .db-materials-row .db-materials-cell-input:first-child { flex:1 1 100%; width:100%; }
+    .db-materials-row .db-materials-cell-input.num { flex:0 0 auto; width:4.5rem; }
+    .db-materials-row .db-materials-cell-total { flex:0 0 auto; }
+    .db-materials-row select.db-material-status { flex:0 0 auto; width:auto; }
+    .db-materials-cell-status { margin-left:auto; flex:0 0 auto; }
+  }
+
+  .db-mood-hint { font-family: var(--font-sans); font-size:0.8125rem; color:var(--text-muted); margin-bottom:var(--db-space-4); padding-bottom:var(--db-space-4); border-bottom:1px solid var(--border); }
 
   /* Detail page — small-screen refinements. The hero/panel paddings and the
      "sentence" meta row are tuned for tablet+ width; below ~600px they eat
      too much of the screen, and the sequence row's fixed 6.5rem date column
      left almost nothing for the description input. */
   @media (max-width: 600px) {
-    .db-hero { padding:1.1rem 1.1rem 1.1rem 1.35rem; }
+    .db-hero { padding:var(--db-space-3); }
     .db-name-input { font-size:1.5rem; }
-    .db-meta { font-size:0.875rem; gap:0.35rem; row-gap:0.5rem; }
+    .db-hero-stats { gap:var(--db-space-3); }
+    .db-hero-stat-value { font-size:1.125rem; }
+    .db-meta { font-size:0.875rem; gap:var(--db-space-1); row-gap:var(--db-space-2); }
     .db-meta-furniture { margin-left:0; }
-    .panel-card { padding:1.1rem; }
+    /* Scoped to .detail-page — this used to be a bare .panel-card rule,
+       which also shrank Overview's cards at phone width even though
+       Overview was never part of this pass. */
+    .detail-page .panel-card { padding:var(--db-space-3); }
     .move-row { flex-direction:column; }
 
     .db-seq-row { flex-wrap:wrap; }
     .db-seq-date {
       order:5; flex:1 1 100%; width:auto; text-align:left;
-      margin-top:0.15rem; padding-left:calc(1.3rem + 0.65rem);
+      margin-top:var(--db-space-1); padding-left:calc(1.3rem + var(--db-space-2));
     }
 
-    .progress-cols { gap:0.4rem; }
+    .progress-cols { gap:var(--db-space-1); }
     .progress-col-title { font-size:0.65rem; }
   }
 
@@ -529,8 +658,8 @@
   .pin-picker-item.selected .pin-picker-check { background:var(--accent-strong); }
 
   /* Color palette */
-  .swatch-row { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.6rem; }
-  .swatch-item { display:flex; flex-direction:column; align-items:center; gap:0.3rem; background:var(--surface-2); border-radius:0; padding:0.5rem; width:5.4rem; }
+  .swatch-row { display:flex; flex-wrap:wrap; gap:var(--db-space-2); margin-bottom:var(--db-space-2); }
+  .swatch-item { display:flex; flex-direction:column; align-items:center; gap:var(--db-space-1); background:var(--surface-2); border-radius:0; padding:var(--db-space-2); width:5.4rem; }
   .swatch-item .sw-color { width:2.3rem; height:2.3rem; padding:0; border:2px solid var(--surface); border-radius:0; cursor:pointer; box-shadow:0 0 0 1px var(--border); }
   .swatch-item .sw-label { width:100%; font-family: var(--font-sans); font-size:0.6875rem; text-align:center; padding:0.15rem; }
 
@@ -596,16 +725,25 @@
   /* Detail page — Colors section. Same card look as the House page's
      palette (.palette-color-* above), plus a role input per link and a
      click-to-add chip picker scoped to that detail's house colors. */
-  .color-role-input { margin-top:0.5rem; font-size:0.8125rem; padding:0.4rem 0.5rem; }
-  .color-picker-label { font-family: var(--font-sans); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-faint); margin:0.9rem 0 0.5rem; }
-  .color-picker-row { display:flex; flex-wrap:wrap; gap:0.5rem; }
+  .color-role-input { margin-top:var(--db-space-1); font-size:0.8125rem; padding:var(--db-space-1) var(--db-space-2); min-height:2.5rem; }
+  .color-picker-label { font-family: var(--font-sans); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-faint); margin:var(--db-space-2) 0 var(--db-space-1); }
+  .color-picker-row { display:flex; flex-wrap:wrap; gap:var(--db-space-1); }
   .color-picker-chip {
-    display:flex; align-items:center; gap:0.4rem; padding:0.35rem 0.7rem 0.35rem 0.4rem;
-    border:1px solid var(--border-strong); background:var(--surface); cursor:pointer;
+    display:flex; align-items:center; gap:var(--db-space-1); padding:var(--db-space-1) var(--db-space-2);
+    min-height:2.5rem; border:1px solid var(--border-strong); background:var(--surface); cursor:pointer;
     font-family: var(--font-sans); font-size:0.8125rem; color:var(--text);
   }
   .color-picker-chip:hover { border-color:var(--accent-strong); }
   .color-picker-swatch { width:1rem; height:1rem; border:1px solid var(--border); flex-shrink:0; }
+
+  /* Colors section cards reuse the House page's .palette-color-* card, but
+     tightened and with the finish pill pulled onto the same line as the
+     brand/code meta instead of its own row — scoped to .detail-page so the
+     House page's own Color Palette cards are untouched. */
+  .detail-page .palette-color-body { padding:var(--db-space-2) var(--db-space-3) var(--db-space-3); }
+  .detail-page .palette-color-meta-row { display:flex; align-items:center; gap:var(--db-space-2); flex-wrap:wrap; margin-top:var(--db-space-1); }
+  .detail-page .palette-color-meta-row .palette-color-meta { margin-top:0; }
+  .detail-page .palette-color-meta-row .palette-color-finish { margin-top:0; }
 
   /* Add/edit color modal — the picker and the typed/pasted hex field share
      one row and stay in sync (same controlled value from the parent). */

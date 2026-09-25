@@ -26,7 +26,7 @@ export function NotesPanel({ detailId, notes }: { detailId: string; notes: strin
         onBlur={(e) => startTransition(() => updateDetail(detailId, { notes: e.target.value || null }))}
       />
       {links.length ? (
-        <div style={{ marginTop: "0.5rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+        <div style={{ marginTop: "var(--db-space-2)", display: "flex", flexWrap: "wrap", gap: "var(--db-space-2)" }}>
           {links.map((link) => (
             <a
               key={link}

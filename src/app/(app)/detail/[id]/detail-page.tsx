@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { money, num } from "@/lib/format";
 import { actualCost, estimatedSpendFor } from "@/lib/derived";
 import { estimateCost } from "@/lib/cost-estimator";
@@ -160,19 +160,39 @@ export function DetailPageClient({
       </div>
 
       <div className="db-hero" style={{ ["--status-color" as string]: statusColor }}>
-        <div className="db-breadcrumb">
-          {house ? house.name : ""}
-          {room ? " › " + room.name : ""}
+        <div className="db-hero-top">
+          <div className="db-hero-top-left">
+            <div className="db-breadcrumb">
+              {house ? house.name : ""}
+              {room ? " · " + room.name : ""}
+            </div>
+            <input
+              className="db-name-input"
+              defaultValue={detail.name}
+              onBlur={(e) => {
+                if (e.target.value.trim() && e.target.value !== detail.name) {
+                  startTransition(() => updateDetail(detail.id, { name: e.target.value.trim() }));
+                }
+              }}
+            />
+          </div>
+          <div className="db-hero-stats">
+            <div className="db-hero-stat">
+              <div className="db-hero-stat-label">Estimate</div>
+              <div className="db-hero-stat-value">{money(estVal)}</div>
+            </div>
+            <div className="db-hero-stat">
+              <div className="db-hero-stat-label">Spent</div>
+              <div className="db-hero-stat-value">{money(actual)}</div>
+            </div>
+            <div className="db-hero-stat">
+              <div className="db-hero-stat-label">{overBudget ? "Over" : "Left"}</div>
+              <div className={`db-hero-stat-value${overBudget ? " over" : ""}`}>
+                {money(Math.abs(actual - estVal))}
+              </div>
+            </div>
+          </div>
         </div>
-        <input
-          className="db-name-input"
-          defaultValue={detail.name}
-          onBlur={(e) => {
-            if (e.target.value.trim() && e.target.value !== detail.name) {
-              startTransition(() => updateDetail(detail.id, { name: e.target.value.trim() }));
-            }
-          }}
-        />
 
         {/* One line, read like a sentence — status, timeframe, target date,
             budget — rather than a row of separate form controls. Every
@@ -262,7 +282,7 @@ export function DetailPageClient({
               return guess;
             }}
           />
-          <SpendPanel detailId={detail.id} lines={lineItems} />
+          <SpendPanel detailId={detail.id} lines={lineItems} estVal={estVal} />
           <NotesPanel detailId={detail.id} notes={detail.notes} />
           <ReferencesPanel
             detailId={detail.id}
@@ -416,114 +436,33 @@ function MoneyPanel({
 const MATERIAL_URGENCY: Record<string, number> = { need_to_source: 0, decided: 1, idea: 2, purchased: 3 };
 
 function MaterialsPanel({ detailId, materials }: { detailId: string; materials: MaterialItem[] }) {
-  const [, startTransition] = useTransition();
   const sorted = [...materials].sort(
     (a, b) => (MATERIAL_URGENCY[a.status] ?? 9) - (MATERIAL_URGENCY[b.status] ?? 9)
   );
+  const planned = sorted.reduce((sum, m) => sum + num(m.roughQuantity) * num(m.roughUnitCost), 0);
   return (
-    <Panel title="Materials plan">
+    <Panel
+      title={
+        <div className="db-panel-title-row">
+          <span>Materials plan</span>
+          {sorted.length ? <span className="db-panel-title-total">{money(planned)} planned</span> : null}
+        </div>
+      }
+    >
       {sorted.length ? (
-        sorted.map((m) => {
-          const total = num(m.roughQuantity) * num(m.roughUnitCost);
-          return (
-            <div className="list-item" key={m.id}>
-              <div className="list-item-main">
-                <input
-                  defaultValue={m.description}
-                  style={{ fontWeight: 500, marginBottom: "0.5rem" }}
-                  onBlur={(e) => {
-                    if (e.target.value.trim() && e.target.value !== m.description) {
-                      startTransition(() => updateMaterial(m.id, { description: e.target.value.trim() }));
-                    }
-                  }}
-                />
-                <div className="field-row">
-                  <div className="field" style={{ marginBottom: 0 }}>
-                    <label className="field-label">Qty</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step="any"
-                      defaultValue={m.roughQuantity}
-                      onBlur={(e) => startTransition(() => updateMaterial(m.id, { roughQuantity: e.target.value }))}
-                    />
-                  </div>
-                  <div className="field" style={{ marginBottom: 0 }}>
-                    <label className="field-label">Unit cost</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step="any"
-                      defaultValue={m.roughUnitCost}
-                      onBlur={(e) => startTransition(() => updateMaterial(m.id, { roughUnitCost: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                <div className="list-item-sub" style={{ marginTop: "0.4rem" }}>Total: {money(total)}</div>
-                <div className="field" style={{ marginTop: "0.5rem", marginBottom: 0 }}>
-                  <label className="field-label">Product link</label>
-                  <input
-                    defaultValue={m.productUrl || ""}
-                    placeholder="Paste a product URL"
-                    onBlur={(e) => {
-                      const value = e.target.value.trim();
-                      if (value === (m.productUrl || "")) return;
-                      // Validated client-side first (sanitizeProductUrl is
-                      // pure JS, safe to call here) — updateMaterial is an
-                      // async server action, so a throw inside it rejects
-                      // the returned promise rather than throwing
-                      // synchronously; validating before the call lets this
-                      // catch reach the user instead of becoming an
-                      // unhandled rejection.
-                      let sanitized: string | null;
-                      try {
-                        sanitized = value ? sanitizeProductUrl(value) : null;
-                      } catch (err) {
-                        alert(err instanceof Error ? err.message : "That link doesn't look valid.");
-                        e.target.value = m.productUrl || "";
-                        return;
-                      }
-                      startTransition(() => updateMaterial(m.id, { productUrl: sanitized }));
-                    }}
-                  />
-                </div>
-                {m.productUrl ? (
-                  <div className="material-link-row">
-                    <a href={m.productUrl} target="_blank" rel="noopener noreferrer" className="material-link">
-                      🔗 {m.retailerName || retailerNameFromUrl(m.productUrl)}
-                    </a>
-                    <input
-                      className="material-retailer-input"
-                      defaultValue={m.retailerName || ""}
-                      placeholder="Rename retailer"
-                      onBlur={(e) => {
-                        if (e.target.value.trim() !== (m.retailerName || "")) {
-                          startTransition(() => updateMaterial(m.id, { retailerName: e.target.value.trim() || null }));
-                        }
-                      }}
-                    />
-                  </div>
-                ) : null}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexShrink: 0 }}>
-                <select
-                  className={`db-material-status ${m.status}`}
-                  defaultValue={m.status}
-                  onChange={(e) => startTransition(() => updateMaterial(m.id, { status: e.target.value }))}
-                >
-                  {Object.entries(MSTATUS_LABEL).map(([k, v]) => (
-                    <option key={k} value={k}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-                <button className="icon-btn" onClick={() => startTransition(() => deleteMaterial(m.id))}>
-                  ✕
-                </button>
-              </div>
-            </div>
-          );
-        })
+        <>
+          <div className="db-materials-head">
+            <span>Item</span>
+            <span className="db-materials-head-num">Qty</span>
+            <span className="db-materials-head-num">Rate</span>
+            <span className="db-materials-head-num">Total</span>
+            <span>Status</span>
+            <span />
+          </div>
+          {sorted.map((m) => (
+            <MaterialRow key={m.id} material={m} />
+          ))}
+        </>
       ) : (
         <div className="empty-note">No materials roughed out yet.</div>
       )}
@@ -532,106 +471,192 @@ function MaterialsPanel({ detailId, materials }: { detailId: string; materials: 
   );
 }
 
+function MaterialRow({ material: m }: { material: MaterialItem }) {
+  const [, startTransition] = useTransition();
+  const [addingLink, setAddingLink] = useState(false);
+  const total = num(m.roughQuantity) * num(m.roughUnitCost);
+
+  return (
+    <div>
+      <div className="db-materials-row">
+        <input
+          className="db-materials-cell-input"
+          defaultValue={m.description}
+          style={{ fontWeight: 500 }}
+          onBlur={(e) => {
+            if (e.target.value.trim() && e.target.value !== m.description) {
+              startTransition(() => updateMaterial(m.id, { description: e.target.value.trim() }));
+            }
+          }}
+        />
+        <input
+          type="number"
+          min={0}
+          step="any"
+          title="Quantity"
+          defaultValue={m.roughQuantity}
+          className="db-materials-cell-input num"
+          onBlur={(e) => startTransition(() => updateMaterial(m.id, { roughQuantity: e.target.value }))}
+        />
+        <input
+          type="number"
+          min={0}
+          step="any"
+          title="Unit cost"
+          defaultValue={m.roughUnitCost}
+          className="db-materials-cell-input num"
+          onBlur={(e) => startTransition(() => updateMaterial(m.id, { roughUnitCost: e.target.value }))}
+        />
+        <span className="db-materials-cell-total">{money(total)}</span>
+        <select
+          className={`db-material-status ${m.status}`}
+          defaultValue={m.status}
+          onChange={(e) => startTransition(() => updateMaterial(m.id, { status: e.target.value }))}
+        >
+          {Object.entries(MSTATUS_LABEL).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
+        </select>
+        <div className="db-materials-cell-status">
+          <button className="icon-btn" onClick={() => startTransition(() => deleteMaterial(m.id))}>
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {m.productUrl ? (
+        <div className="material-link-row">
+          <a href={m.productUrl} target="_blank" rel="noopener noreferrer" className="material-link">
+            🔗 {m.retailerName || retailerNameFromUrl(m.productUrl)}
+          </a>
+          <input
+            className="material-retailer-input"
+            defaultValue={m.retailerName || ""}
+            placeholder="Rename retailer"
+            onBlur={(e) => {
+              if (e.target.value.trim() !== (m.retailerName || "")) {
+                startTransition(() => updateMaterial(m.id, { retailerName: e.target.value.trim() || null }));
+              }
+            }}
+          />
+          <button
+            className="db-materials-link-toggle"
+            onClick={() => startTransition(() => updateMaterial(m.id, { productUrl: null, retailerName: null }))}
+          >
+            Remove
+          </button>
+        </div>
+      ) : addingLink ? (
+        <div className="db-materials-link-input-row">
+          <input
+            autoFocus
+            placeholder="Paste a product URL"
+            onBlur={(e) => {
+              const value = e.target.value.trim();
+              if (!value) {
+                setAddingLink(false);
+                return;
+              }
+              // Validated client-side first (sanitizeProductUrl is pure JS,
+              // safe to call here) — updateMaterial is an async server
+              // action, so a throw inside it rejects the returned promise
+              // rather than throwing synchronously; validating before the
+              // call lets this catch reach the user instead of becoming an
+              // unhandled rejection.
+              try {
+                const sanitized = sanitizeProductUrl(value);
+                startTransition(() => updateMaterial(m.id, { productUrl: sanitized }));
+                setAddingLink(false);
+              } catch (err) {
+                alert(err instanceof Error ? err.message : "That link doesn't look valid.");
+              }
+            }}
+          />
+        </div>
+      ) : (
+        <button className="db-materials-link-toggle" onClick={() => setAddingLink(true)}>
+          + product link
+        </button>
+      )}
+    </div>
+  );
+}
+
 function AddMaterialForm({ detailId }: { detailId: string }) {
   const [, startTransition] = useTransition();
   return (
     <form
-      style={{ marginTop: "0.75rem" }}
+      className="inline-add-form"
+      style={{ marginTop: "var(--db-space-3)" }}
       onSubmit={(e) => {
         e.preventDefault();
         const form = e.currentTarget;
         const desc = (form.elements.namedItem("desc") as HTMLInputElement).value;
-        const qty = (form.elements.namedItem("qty") as HTMLInputElement).value;
-        const cost = (form.elements.namedItem("cost") as HTMLInputElement).value;
-        const rawUrl = (form.elements.namedItem("productUrl") as HTMLInputElement).value;
-        const retailerOverride = (form.elements.namedItem("retailerName") as HTMLInputElement).value;
         if (!desc.trim()) return;
-        let productUrl: string | undefined;
-        try {
-          productUrl = rawUrl.trim() ? sanitizeProductUrl(rawUrl) : undefined;
-        } catch (err) {
-          alert(err instanceof Error ? err.message : "That link doesn't look valid.");
-          return;
-        }
-        startTransition(() => addMaterial(detailId, desc, qty, cost, { productUrl, retailerName: retailerOverride }));
+        startTransition(() => addMaterial(detailId, desc, "1", "0"));
         form.reset();
       }}
     >
-      <div className="field">
-        <label className="field-label">Item</label>
-        <input name="desc" placeholder="e.g. Grout, warm grey" />
-      </div>
-      <div className="field-row">
-        <div className="field">
-          <label className="field-label">Qty</label>
-          <input name="qty" type="number" min={0} step="any" defaultValue={1} />
-        </div>
-        <div className="field">
-          <label className="field-label">Unit cost</label>
-          <input name="cost" type="number" min={0} step="any" placeholder="$" />
-        </div>
-      </div>
-      <div className="field-row">
-        <div className="field">
-          <label className="field-label">Product link</label>
-          <input name="productUrl" placeholder="Optional — paste a URL" />
-        </div>
-        <div className="field">
-          <label className="field-label">Retailer</label>
-          <input name="retailerName" placeholder="Auto from domain" />
-        </div>
-      </div>
+      <input name="desc" placeholder="Add an item — e.g. Grout, warm grey" />
       <button className="secondary" type="submit">
-        + Add material
+        Add
       </button>
     </form>
   );
 }
 
-function SpendPanel({ detailId, lines }: { detailId: string; lines: LineItem[] }) {
+function SpendPanel({ detailId, lines, estVal }: { detailId: string; lines: LineItem[]; estVal: number }) {
   const [, startTransition] = useTransition();
+  const total = lines.reduce((sum, l) => sum + num(l.cost), 0);
   return (
-    <Panel id="panel-spend" title="Actual spend">
+    <Panel
+      id="panel-spend"
+      title={
+        <div className="db-panel-title-row">
+          <span>Actual spend</span>
+          {lines.length ? <span className="db-panel-title-total">{money(total)}</span> : null}
+        </div>
+      }
+    >
       {lines.length ? (
         lines.map((l) => (
           <div className="list-item" key={l.id}>
             {l.receiptAssetId ? <img className="receipt-thumb" src={`/asset/${l.receiptAssetId}`} alt="receipt" /> : null}
             <div className="list-item-main">
-              <input
-                defaultValue={l.description}
-                style={{ fontWeight: 500, marginBottom: "0.5rem" }}
-                onBlur={(e) => {
-                  if (e.target.value.trim() && e.target.value !== l.description) {
-                    startTransition(() => updateLineItem(l.id, { description: e.target.value.trim() }));
-                  }
-                }}
-              />
-              <div className="field-row">
-                <div className="field" style={{ marginBottom: 0 }}>
-                  <label className="field-label">Cost</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="any"
-                    defaultValue={l.cost}
-                    onBlur={(e) => startTransition(() => updateLineItem(l.id, { cost: e.target.value }))}
-                  />
-                </div>
-                <div className="field" style={{ marginBottom: 0 }}>
-                  <label className="field-label">Date</label>
-                  <input
-                    type="date"
-                    defaultValue={l.date || ""}
-                    onBlur={(e) => startTransition(() => updateLineItem(l.id, { date: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div className="field" style={{ marginTop: "0.5rem", marginBottom: 0 }}>
-                <label className="field-label">Vendor</label>
+              <div className="db-spend-row-line">
                 <input
+                  className="db-spend-cell-input"
+                  style={{ fontWeight: 500 }}
+                  defaultValue={l.description}
+                  onBlur={(e) => {
+                    if (e.target.value.trim() && e.target.value !== l.description) {
+                      startTransition(() => updateLineItem(l.id, { description: e.target.value.trim() }));
+                    }
+                  }}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  className="db-spend-cell-input num"
+                  defaultValue={l.cost}
+                  onBlur={(e) => startTransition(() => updateLineItem(l.id, { cost: e.target.value }))}
+                />
+              </div>
+              <div className="db-spend-row-line">
+                <input
+                  className="db-spend-cell-input vendor"
+                  placeholder="Vendor"
                   defaultValue={l.vendor || ""}
-                  placeholder="Optional"
                   onBlur={(e) => startTransition(() => updateLineItem(l.id, { vendor: e.target.value || null }))}
+                />
+                <input
+                  type="date"
+                  className="db-spend-cell-input date"
+                  defaultValue={l.date || ""}
+                  onBlur={(e) => startTransition(() => updateLineItem(l.id, { date: e.target.value }))}
                 />
               </div>
             </div>
@@ -644,6 +669,10 @@ function SpendPanel({ detailId, lines }: { detailId: string; lines: LineItem[] }
         <div className="empty-note">Nothing logged yet.</div>
       )}
       <AddLineItemForm detailId={detailId} />
+      <div className="db-spend-footer">
+        <span>Estimate</span>
+        <span>{money(estVal)}</span>
+      </div>
     </Panel>
   );
 }
@@ -652,39 +681,22 @@ function AddLineItemForm({ detailId }: { detailId: string }) {
   const [, startTransition] = useTransition();
   return (
     <form
-      style={{ marginTop: "0.75rem" }}
+      className="inline-add-form"
+      style={{ marginTop: "var(--db-space-3)" }}
       onSubmit={(e) => {
         e.preventDefault();
         const form = e.currentTarget;
         const desc = (form.elements.namedItem("desc") as HTMLInputElement).value;
         const cost = (form.elements.namedItem("cost") as HTMLInputElement).value;
-        const vendor = (form.elements.namedItem("vendor") as HTMLInputElement).value;
-        const date = (form.elements.namedItem("date") as HTMLInputElement).value;
         if (!desc.trim()) return;
-        startTransition(() => addLineItem(detailId, desc, cost, vendor, date));
+        startTransition(() => addLineItem(detailId, desc, cost, "", new Date().toISOString().slice(0, 10)));
         form.reset();
       }}
     >
-      <div className="field">
-        <label className="field-label">Description</label>
-        <input name="desc" placeholder="e.g. Tile adhesive" />
-      </div>
-      <div className="field-row">
-        <div className="field">
-          <label className="field-label">Cost</label>
-          <input name="cost" placeholder="$" type="number" min={0} step="any" />
-        </div>
-        <div className="field">
-          <label className="field-label">Date</label>
-          <input name="date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
-        </div>
-      </div>
-      <div className="field">
-        <label className="field-label">Vendor</label>
-        <input name="vendor" placeholder="Optional" />
-      </div>
+      <input name="desc" placeholder="Log spend" />
+      <input name="cost" type="number" min={0} step="any" placeholder="$" style={{ maxWidth: "6rem" }} />
       <button className="secondary" type="submit">
-        Log spend
+        Add
       </button>
     </form>
   );

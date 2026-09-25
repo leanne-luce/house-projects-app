@@ -44,12 +44,16 @@ export function ColorsSection({
                 <div className="palette-color-swatch" style={{ background: color.hex }} />
                 <div className="palette-color-body">
                   <div className="palette-color-name">{color.name}</div>
-                  {color.brand || color.colorCode ? (
-                    <div className="palette-color-meta">
-                      {[color.brand, color.colorCode].filter(Boolean).join(" · ")}
-                    </div>
-                  ) : null}
-                  <span className="palette-color-finish">{FINISH_LABEL[color.finish as PaintFinish] || color.finish}</span>
+                  <div className="palette-color-meta-row">
+                    {color.brand || color.colorCode ? (
+                      <span className="palette-color-meta">
+                        {[color.brand, color.colorCode].filter(Boolean).join(" · ")}
+                      </span>
+                    ) : null}
+                    <span className="palette-color-finish">
+                      {FINISH_LABEL[color.finish as PaintFinish] || color.finish}
+                    </span>
+                  </div>
                   <input
                     className="color-role-input"
                     defaultValue={link.role || ""}

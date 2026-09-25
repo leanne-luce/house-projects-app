@@ -30,28 +30,26 @@ export function UnassignedReceiptItemsPanel({
           <div className="list-item-main">
             <input
               defaultValue={item.description}
-              style={{ fontWeight: 500, marginBottom: "0.5rem" }}
+              style={{ fontWeight: 500, marginBottom: "var(--db-space-1)" }}
               onBlur={(e) => {
                 if (e.target.value.trim() && e.target.value !== item.description) {
                   startTransition(() => updateReceiptLineItem(item.id, { description: e.target.value.trim() }));
                 }
               }}
             />
-            <div className="field" style={{ maxWidth: "8rem", marginBottom: 0 }}>
-              <label className="field-label">Amount</label>
+            <div className="list-item-meta">
               <input
                 type="number"
                 min={0}
                 step="any"
+                className="db-inline-amount"
                 defaultValue={item.amount}
                 onBlur={(e) => startTransition(() => updateReceiptLineItem(item.id, { amount: e.target.value }))}
               />
-            </div>
-            <div className="list-item-sub" style={{ marginTop: "0.4rem" }}>
-              from receipt {fmtDate(receiptDates[item.receiptId])}
+              <span>from receipt {fmtDate(receiptDates[item.receiptId])}</span>
             </div>
           </div>
-          <div style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
+          <div style={{ display: "flex", gap: "var(--db-space-1)", flexShrink: 0 }}>
             <button className="secondary" onClick={() => startTransition(() => assignReceiptLineItem(item.id, detailId))}>
               Assign here
             </button>
