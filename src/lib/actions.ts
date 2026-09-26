@@ -66,8 +66,11 @@ function revalidateEverything() {
 // deleteRoom. Shared between deleteDetail and deleteHouse's per-detail loop
 // so the two never drift out of sync on what needs cleaning up.
 async function cleanupDetailChildren(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], detailId: string) {
-  await tx.delete(materialItems).where(eq(materialItems.detailId, detailId));
+  // lineItems before materialItems — a line item can now reference a
+  // material (materialId), so it has to go first or the FK blocks the
+  // material's delete.
   await tx.delete(lineItems).where(eq(lineItems.detailId, detailId));
+  await tx.delete(materialItems).where(eq(materialItems.detailId, detailId));
   await tx.delete(checklistItems).where(eq(checklistItems.detailId, detailId));
   await tx.delete(paletteSwatches).where(eq(paletteSwatches.detailId, detailId));
   await tx.delete(detailPaletteColors).where(eq(detailPaletteColors.detailId, detailId));
@@ -424,7 +427,12 @@ export async function updateMaterial(
 }
 
 export async function deleteMaterial(id: string) {
-  await db.delete(materialItems).where(eq(materialItems.id, id));
+  await db.transaction(async (tx) => {
+    // Detach, don't destroy — an actual-spend entry logged against this
+    // material survives as a general (unlinked) line item.
+    await tx.update(lineItems).set({ materialId: null }).where(eq(lineItems.materialId, id));
+    await tx.delete(materialItems).where(eq(materialItems.id, id));
+  });
   revalidateEverything();
 }
 
@@ -435,11 +443,13 @@ export async function addLineItem(
   description: string,
   cost: string,
   vendor: string,
-  date: string
+  date: string,
+  materialId?: string | null
 ) {
   if (!description.trim()) return;
   await db.insert(lineItems).values({
     detailId,
+    materialId: materialId || null,
     description: description.trim(),
     cost: cost || "0",
     vendor: vendor.trim() || null,
@@ -450,7 +460,7 @@ export async function addLineItem(
 
 export async function updateLineItem(
   id: string,
-  patch: Partial<{ description: string; cost: string; vendor: string | null; date: string }>
+  patch: Partial<{ description: string; cost: string; vendor: string | null; date: string; materialId: string | null }>
 ) {
   await db.update(lineItems).set(patch).where(eq(lineItems.id, id));
   revalidateEverything();
@@ -561,23 +571,6 @@ export async function deleteBoardImage(id: string) {
   await db.delete(boardImageDetails).where(eq(boardImageDetails.boardImageId, id));
   await db.delete(boardImageRooms).where(eq(boardImageRooms.boardImageId, id));
   await db.delete(boardImages).where(eq(boardImages.id, id));
-  revalidateEverything();
-}
-
-// ---------- Color palette (Phase 3) ----------
-
-export async function addSwatch(detailId: string, hex: string, label: string) {
-  await db.insert(paletteSwatches).values({ detailId, hex: hex || "#9D8B5E", label: label.trim() });
-  revalidateEverything();
-}
-
-export async function updateSwatch(id: string, patch: Partial<{ hex: string; label: string }>) {
-  await db.update(paletteSwatches).set(patch).where(eq(paletteSwatches.id, id));
-  revalidateEverything();
-}
-
-export async function deleteSwatch(id: string) {
-  await db.delete(paletteSwatches).where(eq(paletteSwatches.id, id));
   revalidateEverything();
 }
 

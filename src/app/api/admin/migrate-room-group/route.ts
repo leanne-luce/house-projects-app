@@ -38,8 +38,24 @@ export const dynamic = "force-dynamic";
 // backfill needed there — both are brand-new optional fields, existing
 // materials just get NULL, which is exactly "stays valid."
 //
+// ...then line_items.material_id (optional link from an actual-spend entry
+// to the material it's for, so the Materials plan can show Est vs Actual
+// per item). Also no backfill — existing spend just stays unlinked, which
+// keeps it visible in "General spend" exactly as before.
+//
+// ...then the Detail page's 5-section restructure dropped the "General
+// spend" panel entirely — any pre-existing unlinked line_items (real
+// historical spend, not test data) needed a home in Materials plan instead
+// of becoming invisible. Backfill: one generic "Other costs" material per
+// detail that had unlinked spend (qty 1, rate $0 so it adds nothing to the
+// estimate, status "purchased" since the money's already spent), then
+// repoint those line_items at it. Guarded by NOT EXISTS on the material
+// (never creates a second "Other costs" row) and `material_id IS NULL` on
+// the line_items (never re-touches a row already linked), so it's safe to
+// run again.
+//
 // This route has grown a step for every feature that's touched the schema
-// (four now) because production's DATABASE_URL can't be read or matched
+// (six now) because production's DATABASE_URL can't be read or matched
 // against Neon's console from outside the app — this is the only place
 // that's confirmed to reach the right database. Worth replacing with a
 // real migration-on-deploy step before the next one.
@@ -121,10 +137,40 @@ export async function GET() {
   await db.execute(sql`ALTER TABLE "material_items" ADD COLUMN IF NOT EXISTS "product_url" text`);
   await db.execute(sql`ALTER TABLE "material_items" ADD COLUMN IF NOT EXISTS "retailer_name" text`);
 
+  await db.execute(sql`
+    ALTER TABLE "line_items" ADD COLUMN IF NOT EXISTS "material_id" text REFERENCES "material_items"("id")
+  `);
+
+  const otherCostsMaterials = await db.execute(sql`
+    INSERT INTO material_items (id, detail_id, description, rough_quantity, rough_unit_cost, status, created_at)
+    SELECT gen_random_uuid()::text, d.detail_id, 'Other costs', '1', '0', 'purchased', now()
+    FROM (SELECT DISTINCT detail_id FROM line_items WHERE material_id IS NULL) d
+    WHERE NOT EXISTS (
+      SELECT 1 FROM material_items m WHERE m.detail_id = d.detail_id AND m.description = 'Other costs'
+    )
+    RETURNING detail_id
+  `);
+
+  const relinkedLineItems = await db.execute(sql`
+    UPDATE line_items li
+    SET material_id = m.id
+    FROM material_items m
+    WHERE li.material_id IS NULL
+      AND m.detail_id = li.detail_id
+      AND m.description = 'Other costs'
+    RETURNING li.id
+  `);
+
   const rooms = await db.execute(sql`SELECT name, "group" FROM rooms ORDER BY created_at`);
   const paletteColors = await db.execute(sql`SELECT name, hex FROM house_palette_colors ORDER BY created_at`);
   const materialsWithLinks = await db.execute(
     sql`SELECT description, product_url, retailer_name FROM material_items WHERE product_url IS NOT NULL`
+  );
+  const lineItemsMaterialColumn = await db.execute(
+    sql`SELECT count(*)::int AS linked_count FROM line_items WHERE material_id IS NOT NULL`
+  );
+  const stillUnlinkedLineItems = await db.execute(
+    sql`SELECT count(*)::int AS still_unlinked FROM line_items WHERE material_id IS NULL`
   );
 
   // Explicit no-store: repeated GET hits to this route kept coming back
@@ -133,7 +179,18 @@ export async function GET() {
   // serving an old response rather than this handler re-running. This is
   // belt-and-suspenders with `dynamic = "force-dynamic"` above.
   return Response.json(
-    { ok: true, rooms, paletteColors, backfilled, unmatchedSwatches, materialsWithLinks },
+    {
+      ok: true,
+      rooms,
+      paletteColors,
+      backfilled,
+      unmatchedSwatches,
+      materialsWithLinks,
+      lineItemsMaterialColumn,
+      otherCostsMaterialsCreated: otherCostsMaterials.length,
+      lineItemsRelinked: relinkedLineItems.length,
+      stillUnlinkedLineItems,
+    },
     { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
   );
 }

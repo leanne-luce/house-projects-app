@@ -207,6 +207,13 @@ export const lineItems = pgTable("line_items", {
   detailId: text("detail_id")
     .notNull()
     .references(() => details.id),
+  // DEVIATION (addition, on request): optionally ties an actual-spend entry
+  // to one planned material, so the Materials plan can show "Est $X /
+  // Actual $Y" per item. Nullable — a spend entry with no material stays in
+  // the general Actual Spend list (unassigned receipt items, misc costs).
+  // Deleting a material detaches its line items rather than deleting them
+  // (same "detach, don't destroy" pattern as details.roomId on deleteRoom).
+  materialId: text("material_id").references(() => materialItems.id),
   description: text("description").notNull(),
   cost: numeric("cost").notNull().default("0"),
   vendor: text("vendor"),

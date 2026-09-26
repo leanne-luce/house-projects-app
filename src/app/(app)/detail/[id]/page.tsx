@@ -18,10 +18,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       lineItems={data.lineItems}
       checklistItems={data.checklistItems}
       boardImages={data.boardImages}
-      paletteSwatches={data.paletteSwatches}
       progressPhotos={data.progressPhotos}
-      pendingReceiptItems={data.pendingReceiptItems}
-      receiptDates={data.receiptDates}
       contentTypeByAssetId={data.contentTypeByAssetId}
       housePaletteColors={data.housePaletteColors}
       detailPaletteColors={data.detailPaletteColors}
