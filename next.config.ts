@@ -12,6 +12,18 @@ const nextConfig: NextConfig = {
   // own dynamic requires or worker spawning.
   serverExternalPackages: ["tesseract.js", "pdfjs-dist"],
 
+  // The vendored English language file OCR reads from (src/lib/tessdata/ —
+  // see src/lib/ocr.ts for why it's vendored instead of fetched from a CDN
+  // at runtime) is read via a path built at runtime, not a static
+  // import/require — Next.js's build-time file tracing only follows
+  // statically-analyzable references, so without this the file never makes
+  // it into the deployed serverless function and `langPath` points at
+  // nothing in production even though it works locally. `/*` covers every
+  // route since receipt upload/re-scan can be invoked from more than one.
+  outputFileTracingIncludes: {
+    "/*": ["src/lib/tessdata/**/*"],
+  },
+
   // Every upload in this app (receipts, mood board/reference images,
   // progress photos and video) goes through a Server Action, and Next.js
   // caps a Server Action's request body at 1MB by default. Mood board etc.

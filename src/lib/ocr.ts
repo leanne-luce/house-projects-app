@@ -1,4 +1,5 @@
 import "server-only";
+import path from "path";
 import { createWorker } from "tesseract.js";
 // Legacy Node-compatible build — the "legacy" export exists specifically
 // for environments without a DOM (browser canvas, web workers via
@@ -12,12 +13,45 @@ import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 // this feature (see PLAN.md's Phase 4 note): ~350ms warm / ~700ms cold for
 // a full receipt-sized image on this machine, comfortably inside Vercel
 // Hobby's function duration budget (60-300s) — not just assumed to fit.
+//
+// BUT: left at its defaults, tesseract.js still fetches the English
+// language data (~3MB) from jsdelivr's CDN on every cold start — `/tmp` is
+// wiped between Vercel invocations, so `cachePath` alone never gets a
+// chance to help there. That network fetch was the actual cause of
+// receipts getting stuck at "processing" forever in production: if it's
+// slow or the container gets recycled mid-fetch, the whole function is
+// killed from outside, so neither the try/catch below nor the "processing"
+// status-reset in extractAndStoreLineItems ever runs. Fix: the exact same
+// file tesseract.js would have downloaded is vendored at
+// src/lib/tessdata/eng.traineddata.gz (see next.config.ts's
+// outputFileTracingIncludes for why it survives the serverless bundle),
+// and `langPath` points at it directly — a local file read, no network
+// involved, so cold starts are no slower than warm ones.
+const LANG_PATH = path.join(process.cwd(), "src/lib/tessdata");
+
+// Belt-and-suspenders for the same failure mode: if recognize() ever does
+// hang for some other reason, fail fast (well inside any serverless
+// duration budget) and record a real ocrError instead of leaving the
+// receipt stuck at "processing" with no way to tell what happened short of
+// clicking Re-scan and hoping.
+const OCR_TIMEOUT_MS = 20_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+  ]);
+}
 
 export async function runOcr(imageBuffer: Buffer): Promise<{ text: string } | { error: string }> {
   let worker;
   try {
-    worker = await createWorker("eng", 1, { cachePath: "/tmp/tesseract-cache" });
-    const { data } = await worker.recognize(imageBuffer);
+    worker = await withTimeout(
+      createWorker("eng", 1, { cachePath: "/tmp/tesseract-cache", langPath: LANG_PATH }),
+      OCR_TIMEOUT_MS,
+      "OCR worker startup"
+    );
+    const { data } = await withTimeout(worker.recognize(imageBuffer), OCR_TIMEOUT_MS, "OCR recognition");
     return { text: data.text || "" };
   } catch (err) {
     console.error("OCR failed", err);
