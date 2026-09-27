@@ -16,6 +16,7 @@ import type {
   progressPhotoDetails,
   progressPhotos,
   rooms,
+  floorPlans,
 } from "@/db/schema";
 
 type Detail = typeof details.$inferSelect;
@@ -28,6 +29,7 @@ type ProgressPhotoDetailLink = typeof progressPhotoDetails.$inferSelect;
 type BoardImage = typeof boardImages.$inferSelect;
 type BoardImageDetailLink = typeof boardImageDetails.$inferSelect;
 type BoardImageRoomLink = typeof boardImageRooms.$inferSelect;
+type FloorPlan = typeof floorPlans.$inferSelect;
 
 export function detailsForHouse(allDetails: Detail[], houseId: string) {
   return allDetails.filter((d) => d.houseId === houseId);
@@ -229,4 +231,23 @@ export function roomPath(
   if (!detail) return "—";
   const r = detail.roomId ? allRooms.find((x) => x.id === detail.roomId) : null;
   return [r ? r.name : null, detail.name].filter(Boolean).join(" / ");
+}
+
+export type FloorPlanWithContext = FloorPlan & { houseName: string; detailName: string | null };
+
+// Resolves each sketch's home (house name, and detail name if it belongs to
+// one specifically) so the "Attach sketch" picker can show something like
+// "Sea Cliff House — Kitchen" instead of a bare id — computed once, shared
+// by every FloorPlanSection instance across the app rather than each one
+// re-deriving it from the same raw houses/details lists.
+export function floorPlansWithContext(
+  allFloorPlans: FloorPlan[],
+  allHouses: House[],
+  allDetails: Detail[]
+): FloorPlanWithContext[] {
+  return allFloorPlans.map((f) => ({
+    ...f,
+    houseName: allHouses.find((h) => h.id === f.houseId)?.name || "Unknown house",
+    detailName: f.detailId ? allDetails.find((d) => d.id === f.detailId)?.name || null : null,
+  }));
 }

@@ -12,6 +12,7 @@ import {
   numeric,
   boolean,
   timestamp,
+  jsonb,
   check,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -322,6 +323,54 @@ export const detailPaletteColors = pgTable("detail_palette_colors", {
     .notNull()
     .references(() => housePaletteColors.id),
   role: text("role"),
+  createdAt: createdAt(),
+});
+
+// A house's or a detail's floor plans and sketches — each row is one
+// drawing made with the embedded Excalidraw canvas
+// (src/components/floor-plan-section.tsx). sceneData holds Excalidraw's own
+// scene export shape ({elements, appState, files}) verbatim, so the canvas
+// can be reopened exactly as it was left — this app never reads inside it,
+// just round-trips it.
+//
+// houseId is always set (every sketch has a home house), detailId only
+// when it was created from a specific detail rather than the house level —
+// that pair is what makes a house's own collection and a detail's own
+// collection genuinely separate rather than one shared pool. Cross-
+// referencing an existing sketch from somewhere else ("Attach sketch") goes
+// through the two join tables below instead of reassigning these fields,
+// same reasoning as boardImageDetails/boardImageRooms: one sketch can be
+// relevant to more than one place without living in two rows.
+export const floorPlans = pgTable("floor_plans", {
+  id: id(),
+  houseId: text("house_id")
+    .notNull()
+    .references(() => houses.id),
+  detailId: text("detail_id").references(() => details.id),
+  name: text("name").notNull().default("Untitled sketch"),
+  sceneData: jsonb("scene_data"),
+  createdAt: createdAt(),
+});
+
+export const floorPlanDetailLinks = pgTable("floor_plan_detail_links", {
+  id: id(),
+  floorPlanId: text("floor_plan_id")
+    .notNull()
+    .references(() => floorPlans.id),
+  detailId: text("detail_id")
+    .notNull()
+    .references(() => details.id),
+  createdAt: createdAt(),
+});
+
+export const floorPlanHouseLinks = pgTable("floor_plan_house_links", {
+  id: id(),
+  floorPlanId: text("floor_plan_id")
+    .notNull()
+    .references(() => floorPlans.id),
+  houseId: text("house_id")
+    .notNull()
+    .references(() => houses.id),
   createdAt: createdAt(),
 });
 

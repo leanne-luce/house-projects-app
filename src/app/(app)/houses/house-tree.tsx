@@ -26,8 +26,10 @@ import {
   addDetail,
 } from "@/lib/actions";
 import { ROOM_GROUP_VALUES } from "@/db/schema";
-import type { details as detailsTable, houses as housesTable, lineItems as lineItemsTable, materialItems as materialItemsTable, rooms as roomsTable, housePaletteColors as housePaletteColorsTable, detailPaletteColors as detailPaletteColorsTable } from "@/db/schema";
+import type { details as detailsTable, houses as housesTable, lineItems as lineItemsTable, materialItems as materialItemsTable, rooms as roomsTable, housePaletteColors as housePaletteColorsTable, detailPaletteColors as detailPaletteColorsTable, floorPlanDetailLinks as floorPlanDetailLinksTable, floorPlanHouseLinks as floorPlanHouseLinksTable } from "@/db/schema";
+import type { FloorPlanWithContext } from "@/lib/derived";
 import { PaletteSection } from "./palette-section";
+import { FloorPlanSection } from "@/components/floor-plan-section";
 
 type House = typeof housesTable.$inferSelect;
 type Room = typeof roomsTable.$inferSelect;
@@ -36,6 +38,8 @@ type MaterialItem = typeof materialItemsTable.$inferSelect;
 type LineItem = typeof lineItemsTable.$inferSelect;
 type PaletteColor = typeof housePaletteColorsTable.$inferSelect;
 type DetailPaletteColorLink = typeof detailPaletteColorsTable.$inferSelect;
+type FloorPlanDetailLink = typeof floorPlanDetailLinksTable.$inferSelect;
+type FloorPlanHouseLink = typeof floorPlanHouseLinksTable.$inferSelect;
 type RoomGroup = (typeof ROOM_GROUP_VALUES)[number];
 
 const ROOM_GROUP_LABEL: Record<RoomGroup, string> = {
@@ -66,6 +70,9 @@ export function HouseTree({
   lineItems,
   paletteColors,
   detailPaletteColors,
+  floorPlans,
+  floorPlanDetailLinks,
+  floorPlanHouseLinks,
 }: {
   houses: House[];
   rooms: Room[];
@@ -74,6 +81,9 @@ export function HouseTree({
   lineItems: LineItem[];
   paletteColors: PaletteColor[];
   detailPaletteColors: DetailPaletteColorLink[];
+  floorPlans: FloorPlanWithContext[];
+  floorPlanDetailLinks: FloorPlanDetailLink[];
+  floorPlanHouseLinks: FloorPlanHouseLink[];
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(houses.map((h) => h.id)));
   // Rooms are collapsible too, independent of the house they're in — keyed
@@ -257,6 +267,17 @@ export function HouseTree({
                   colorLinks={houseColorLinks}
                   details={houseAllDetails}
                 />
+
+                <div className="room-group">
+                  <div className="room-group-title">Floor plan &amp; sketches</div>
+                  <FloorPlanSection
+                    ownerType="house"
+                    ownerId={h.id}
+                    allFloorPlans={floorPlans}
+                    detailLinks={floorPlanDetailLinks}
+                    houseLinks={floorPlanHouseLinks}
+                  />
+                </div>
 
                 {ROOM_GROUP_VALUES.map((g) => {
                   const groupRooms = houseRooms.filter((r) => ((r.group as RoomGroup) || "interior") === g);

@@ -54,8 +54,21 @@ export const dynamic = "force-dynamic";
 // the line_items (never re-touches a row already linked), so it's safe to
 // run again.
 //
+// ...then floor_plans (House page's "Floor plan & sketches" section) — one
+// row per Excalidraw sketch, sceneData stored as jsonb and round-tripped
+// opaque (this app never reads inside it). No backfill needed, brand new
+// table/feature.
+//
+// ...then floor_plans.detail_id (each detail gets its own separate sketch
+// collection, not just the house's shared one) plus floor_plan_detail_links
+// / floor_plan_house_links (the "Attach sketch" cross-reference, same shape
+// as board_image_details/board_image_rooms — a sketch's home house/detail
+// never changes, attaching elsewhere is a join row, not a move). No
+// backfill: every existing floor_plans row already has detail_id NULL,
+// which is exactly "house-level sketch, unchanged."
+//
 // This route has grown a step for every feature that's touched the schema
-// (six now) because production's DATABASE_URL can't be read or matched
+// (eight now) because production's DATABASE_URL can't be read or matched
 // against Neon's console from outside the app — this is the only place
 // that's confirmed to reach the right database. Worth replacing with a
 // real migration-on-deploy step before the next one.
@@ -161,6 +174,36 @@ export async function GET() {
     RETURNING li.id
   `);
 
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "floor_plans" (
+      "id" text PRIMARY KEY,
+      "house_id" text NOT NULL REFERENCES "houses"("id"),
+      "name" text NOT NULL DEFAULT 'Untitled sketch',
+      "scene_data" jsonb,
+      "created_at" timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+
+  await db.execute(sql`ALTER TABLE "floor_plans" ADD COLUMN IF NOT EXISTS "detail_id" text REFERENCES "details"("id")`);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "floor_plan_detail_links" (
+      "id" text PRIMARY KEY,
+      "floor_plan_id" text NOT NULL REFERENCES "floor_plans"("id"),
+      "detail_id" text NOT NULL REFERENCES "details"("id"),
+      "created_at" timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "floor_plan_house_links" (
+      "id" text PRIMARY KEY,
+      "floor_plan_id" text NOT NULL REFERENCES "floor_plans"("id"),
+      "house_id" text NOT NULL REFERENCES "houses"("id"),
+      "created_at" timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+
   const rooms = await db.execute(sql`SELECT name, "group" FROM rooms ORDER BY created_at`);
   const paletteColors = await db.execute(sql`SELECT name, hex FROM house_palette_colors ORDER BY created_at`);
   const materialsWithLinks = await db.execute(
@@ -172,6 +215,12 @@ export async function GET() {
   const stillUnlinkedLineItems = await db.execute(
     sql`SELECT count(*)::int AS still_unlinked FROM line_items WHERE material_id IS NULL`
   );
+  const floorPlanCount = await db.execute(sql`SELECT count(*)::int AS count FROM floor_plans`);
+  const floorPlanLinkCounts = await db.execute(sql`
+    SELECT
+      (SELECT count(*)::int FROM floor_plan_detail_links) AS detail_links,
+      (SELECT count(*)::int FROM floor_plan_house_links) AS house_links
+  `);
 
   // Explicit no-store: repeated GET hits to this route kept coming back
   // with an identical, stale response body even across deploys that
@@ -190,6 +239,8 @@ export async function GET() {
       otherCostsMaterialsCreated: otherCostsMaterials.length,
       lineItemsRelinked: relinkedLineItems.length,
       stillUnlinkedLineItems,
+      floorPlanCount,
+      floorPlanLinkCounts,
     },
     { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
   );

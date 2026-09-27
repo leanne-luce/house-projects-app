@@ -20,21 +20,37 @@ import {
   assets,
   housePaletteColors,
   detailPaletteColors,
+  floorPlans,
+  floorPlanDetailLinks,
+  floorPlanHouseLinks,
 } from "@/db/schema";
 import { asc, desc } from "drizzle-orm";
-import { photosForDetail, inspirationForDetail } from "./derived";
+import { photosForDetail, inspirationForDetail, floorPlansWithContext } from "./derived";
 
 export async function getHousesTreeData() {
-  const [housesRows, roomsRows, detailsRows, materialsRows, lineItemsRows, paletteColorRows, colorLinkRows] =
-    await Promise.all([
-      db.select().from(houses).orderBy(asc(houses.createdAt)),
-      db.select().from(rooms).orderBy(asc(rooms.createdAt)),
-      db.select().from(details).orderBy(asc(details.createdAt)),
-      db.select().from(materialItems),
-      db.select().from(lineItems),
-      db.select().from(housePaletteColors).orderBy(asc(housePaletteColors.createdAt)),
-      db.select().from(detailPaletteColors),
-    ]);
+  const [
+    housesRows,
+    roomsRows,
+    detailsRows,
+    materialsRows,
+    lineItemsRows,
+    paletteColorRows,
+    colorLinkRows,
+    floorPlanRows,
+    floorPlanDetailLinkRows,
+    floorPlanHouseLinkRows,
+  ] = await Promise.all([
+    db.select().from(houses).orderBy(asc(houses.createdAt)),
+    db.select().from(rooms).orderBy(asc(rooms.createdAt)),
+    db.select().from(details).orderBy(asc(details.createdAt)),
+    db.select().from(materialItems),
+    db.select().from(lineItems),
+    db.select().from(housePaletteColors).orderBy(asc(housePaletteColors.createdAt)),
+    db.select().from(detailPaletteColors),
+    db.select().from(floorPlans).orderBy(asc(floorPlans.createdAt)),
+    db.select().from(floorPlanDetailLinks),
+    db.select().from(floorPlanHouseLinks),
+  ]);
   return {
     houses: housesRows,
     rooms: roomsRows,
@@ -43,6 +59,9 @@ export async function getHousesTreeData() {
     lineItems: lineItemsRows,
     paletteColors: paletteColorRows,
     detailPaletteColors: colorLinkRows,
+    floorPlans: floorPlansWithContext(floorPlanRows, housesRows, detailsRows),
+    floorPlanDetailLinks: floorPlanDetailLinkRows,
+    floorPlanHouseLinks: floorPlanHouseLinkRows,
   };
 }
 
@@ -62,6 +81,9 @@ export async function getDetailPageData(detailId: string) {
     allAssets,
     allPaletteColors,
     allDetailPaletteColorLinks,
+    allFloorPlans,
+    allFloorPlanDetailLinks,
+    allFloorPlanHouseLinks,
   ] = await Promise.all([
     db.select().from(houses),
     db.select().from(rooms),
@@ -77,6 +99,9 @@ export async function getDetailPageData(detailId: string) {
     db.select().from(assets),
     db.select().from(housePaletteColors).orderBy(asc(housePaletteColors.createdAt)),
     db.select().from(detailPaletteColors),
+    db.select().from(floorPlans).orderBy(asc(floorPlans.createdAt)),
+    db.select().from(floorPlanDetailLinks),
+    db.select().from(floorPlanHouseLinks),
   ]);
   const detail = detailRows.find((d) => d.id === detailId) || null;
   return {
@@ -93,6 +118,9 @@ export async function getDetailPageData(detailId: string) {
     contentTypeByAssetId: Object.fromEntries(allAssets.map((a) => [a.id, a.contentType])),
     housePaletteColors: detail ? allPaletteColors.filter((c) => c.houseId === detail.houseId) : [],
     detailPaletteColors: allDetailPaletteColorLinks.filter((l) => l.detailId === detailId),
+    floorPlans: floorPlansWithContext(allFloorPlans, allHouses, detailRows),
+    floorPlanDetailLinks: allFloorPlanDetailLinks,
+    floorPlanHouseLinks: allFloorPlanHouseLinks,
   };
 }
 

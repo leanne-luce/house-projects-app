@@ -6,10 +6,12 @@ export function Modal({
   title,
   onClose,
   children,
+  size,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  size?: "large";
 }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -26,7 +28,7 @@ export function Modal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal">
+      <div className={`modal${size === "large" ? " large" : ""}`}>
         <div className="modal-header">
           <b className="modal-title">{title}</b>
           <button className="modal-close" onClick={onClose} aria-label="Close">

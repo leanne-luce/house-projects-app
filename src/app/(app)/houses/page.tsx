@@ -14,6 +14,9 @@ export default async function HousesPage() {
       lineItems={data.lineItems}
       paletteColors={data.paletteColors}
       detailPaletteColors={data.detailPaletteColors}
+      floorPlans={data.floorPlans}
+      floorPlanDetailLinks={data.floorPlanDetailLinks}
+      floorPlanHouseLinks={data.floorPlanHouseLinks}
     />
   );
 }

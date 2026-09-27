@@ -31,6 +31,9 @@ import {
   housePaletteColors,
   PAINT_FINISH_VALUES,
   detailPaletteColors,
+  floorPlans,
+  floorPlanDetailLinks,
+  floorPlanHouseLinks,
 } from "@/db/schema";
 
 import { eq, and, inArray } from "drizzle-orm";
@@ -74,6 +77,24 @@ async function cleanupDetailChildren(tx: Parameters<Parameters<typeof db.transac
   await tx.delete(checklistItems).where(eq(checklistItems.detailId, detailId));
   await tx.delete(paletteSwatches).where(eq(paletteSwatches.detailId, detailId));
   await tx.delete(detailPaletteColors).where(eq(detailPaletteColors.detailId, detailId));
+
+  // A sketch "owned" by this detail (floorPlans.detailId) may also be
+  // linked to OTHER details/houses via the join tables ("Attach sketch") —
+  // those link rows have to go before the sketch itself can be deleted,
+  // same reasoning as the owned-photos cleanup just below.
+  const ownedFloorPlans = await tx
+    .select({ id: floorPlans.id })
+    .from(floorPlans)
+    .where(eq(floorPlans.detailId, detailId));
+  if (ownedFloorPlans.length) {
+    const ids = ownedFloorPlans.map((f) => f.id);
+    await tx.delete(floorPlanDetailLinks).where(inArray(floorPlanDetailLinks.floorPlanId, ids));
+    await tx.delete(floorPlanHouseLinks).where(inArray(floorPlanHouseLinks.floorPlanId, ids));
+  }
+  // This detail's link to any OTHER sketch it didn't own — the sketch
+  // itself survives, it just loses this one attachment.
+  await tx.delete(floorPlanDetailLinks).where(eq(floorPlanDetailLinks.detailId, detailId));
+  await tx.delete(floorPlans).where(eq(floorPlans.detailId, detailId));
 
   // A photo "owned" by this detail (progressPhotos.detailId) may also be
   // linked to OTHER details via progressPhotoDetails (that's the whole
@@ -151,6 +172,21 @@ export async function deleteHouse(id: string) {
     }
     await tx.delete(rooms).where(eq(rooms.houseId, id));
     await tx.delete(housePaletteColors).where(eq(housePaletteColors.houseId, id));
+
+    // Any detail-owned sketch under this house is already gone via
+    // cleanupDetailChildren above — what's left is house-owned sketches,
+    // which may still be linked elsewhere via the join tables ("Attach
+    // sketch"). Clean those up before the sketch rows themselves.
+    const ownedFloorPlans = await tx.select({ id: floorPlans.id }).from(floorPlans).where(eq(floorPlans.houseId, id));
+    if (ownedFloorPlans.length) {
+      const ids = ownedFloorPlans.map((f) => f.id);
+      await tx.delete(floorPlanDetailLinks).where(inArray(floorPlanDetailLinks.floorPlanId, ids));
+      await tx.delete(floorPlanHouseLinks).where(inArray(floorPlanHouseLinks.floorPlanId, ids));
+    }
+    // This house's link to any OTHER sketch it didn't own — the sketch
+    // itself survives, it just loses this one attachment.
+    await tx.delete(floorPlanHouseLinks).where(eq(floorPlanHouseLinks.houseId, id));
+    await tx.delete(floorPlans).where(eq(floorPlans.houseId, id));
 
     // Any inspiration image this house owns — assigned or not — goes with
     // it; every detail/room it could have been tagged to is already gone.
@@ -307,6 +343,78 @@ export async function updateDetailPaletteColorRole(linkId: string, role: string 
 
 export async function unlinkPaletteColorFromDetail(linkId: string) {
   await db.delete(detailPaletteColors).where(eq(detailPaletteColors.id, linkId));
+  revalidateEverything();
+}
+
+// ---------- Floor plans & sketches ----------
+// A sketch's home is either a house or one specific detail (floorPlans.
+// houseId/detailId) — that's what makes each one's "own" collection
+// genuinely separate. Attaching an existing sketch somewhere else goes
+// through the two join tables instead, same shape as boardImageDetails/
+// boardImageRooms: cross-referencing without moving or duplicating it.
+
+export async function addFloorPlan(owner: { houseId: string } | { detailId: string }, name: string) {
+  let houseId: string;
+  let detailId: string | null = null;
+  if ("detailId" in owner) {
+    const [detail] = await db.select({ houseId: details.houseId }).from(details).where(eq(details.id, owner.detailId));
+    if (!detail) throw new Error("That detail doesn't exist.");
+    houseId = detail.houseId;
+    detailId = owner.detailId;
+  } else {
+    houseId = owner.houseId;
+  }
+  const [row] = await db
+    .insert(floorPlans)
+    .values({ houseId, detailId, name: name.trim() || "Untitled sketch" })
+    .returning();
+  revalidateEverything();
+  return row;
+}
+
+export async function updateFloorPlan(id: string, patch: Partial<{ name: string; sceneData: unknown }>) {
+  await db.update(floorPlans).set(patch).where(eq(floorPlans.id, id));
+  revalidateEverything();
+}
+
+export async function deleteFloorPlan(id: string) {
+  await db.transaction(async (tx) => {
+    await tx.delete(floorPlanDetailLinks).where(eq(floorPlanDetailLinks.floorPlanId, id));
+    await tx.delete(floorPlanHouseLinks).where(eq(floorPlanHouseLinks.floorPlanId, id));
+    await tx.delete(floorPlans).where(eq(floorPlans.id, id));
+  });
+  revalidateEverything();
+}
+
+export async function attachFloorPlanToDetail(floorPlanId: string, detailId: string) {
+  const [existing] = await db
+    .select()
+    .from(floorPlanDetailLinks)
+    .where(and(eq(floorPlanDetailLinks.floorPlanId, floorPlanId), eq(floorPlanDetailLinks.detailId, detailId)))
+    .limit(1);
+  if (existing) return;
+  await db.insert(floorPlanDetailLinks).values({ floorPlanId, detailId });
+  revalidateEverything();
+}
+
+export async function detachFloorPlanFromDetail(linkId: string) {
+  await db.delete(floorPlanDetailLinks).where(eq(floorPlanDetailLinks.id, linkId));
+  revalidateEverything();
+}
+
+export async function attachFloorPlanToHouse(floorPlanId: string, houseId: string) {
+  const [existing] = await db
+    .select()
+    .from(floorPlanHouseLinks)
+    .where(and(eq(floorPlanHouseLinks.floorPlanId, floorPlanId), eq(floorPlanHouseLinks.houseId, houseId)))
+    .limit(1);
+  if (existing) return;
+  await db.insert(floorPlanHouseLinks).values({ floorPlanId, houseId });
+  revalidateEverything();
+}
+
+export async function detachFloorPlanFromHouse(linkId: string) {
+  await db.delete(floorPlanHouseLinks).where(eq(floorPlanHouseLinks.id, linkId));
   revalidateEverything();
 }
 

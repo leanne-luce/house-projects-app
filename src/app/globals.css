@@ -257,6 +257,14 @@
   .modal-header .modal-title { font-family: var(--font-display); font-weight:400; font-size:1.25rem; letter-spacing:-0.01em; }
   .modal-body { padding:1.5rem; }
   .modal-close { background:none; border:none; font-size:1.3rem; color:var(--text-faint); cursor:pointer; line-height:1; padding:0.2rem 0.4rem; }
+
+  /* Large variant — for content that needs real screen space (the
+     Excalidraw canvas) rather than a scrolling form. Fixed viewport-relative
+     height instead of the default's content-driven max-height, and the
+     body becomes a flex container so its child can claim "the rest of the
+     modal" via flex:1/min-height:0 instead of collapsing to zero height. */
+  .modal.large { max-width:96vw; width:96vw; height:90vh; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; }
+  .modal.large .modal-body { flex:1; min-height:0; padding:1rem; display:flex; overflow:hidden; }
   .section { margin-bottom:1.3rem; }
   .section-title { font-family: var(--font-sans); font-size:0.7rem; font-weight:500; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-muted); margin-bottom:0.6rem; display:flex; align-items:center; justify-content:space-between; }
   .list-item { display:flex; align-items:flex-start; justify-content:space-between; gap:0.6rem; padding:0.75rem 0.875rem; background:var(--surface-2); border-radius:0; margin-bottom:0.375rem; }
@@ -700,6 +708,35 @@
   .palette-color-where { font-family:var(--font-sans); font-size:0.75rem; color:var(--text-faint); margin-top:0.4rem; font-style:italic; }
   .palette-color-usage { font-family:var(--font-sans); font-size:0.7rem; color:var(--text-faint); margin-top:0.3rem; }
   .palette-color-actions { display:flex; align-items:center; justify-content:space-between; margin-top:0.5rem; }
+
+  /* Floor plan & sketches — shared between the Houses page and the Detail
+     page's Vibe section. Same compact-card idiom as the Color Palette grid,
+     with a live preview rendered from the sketch's own saved elements
+     (via Excalidraw's exportToSvg) standing in for a swatch. */
+  .floor-plan-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(9.5rem,1fr)); gap:0.7rem; }
+  .floor-plan-card {
+    background:var(--surface); border:1px solid var(--border); padding:0.6rem 0.6rem 0.75rem; text-align:center;
+    cursor:pointer; position:relative; transition:border-color .15s;
+  }
+  .floor-plan-card:hover { border-color:var(--accent-strong); }
+  .floor-plan-card-preview {
+    width:100%; height:6rem; display:flex; align-items:center; justify-content:center; overflow:hidden;
+    background:var(--surface-2); margin-bottom:0.5rem; border:1px solid var(--border);
+  }
+  .floor-plan-card-svg { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+  .floor-plan-card-svg svg { max-width:100%; max-height:100%; width:auto; height:auto; }
+  .floor-plan-card-icon { font-size:1.5rem; color:var(--text-faint); }
+  .floor-plan-card-name { font-family:var(--font-sans); font-size:0.875rem; font-weight:500; overflow-wrap:break-word; }
+  .floor-plan-card-source { font-family:var(--font-sans); font-size:0.7rem; color:var(--text-faint); margin-top:0.15rem; font-style:italic; }
+  .floor-plan-card-delete { position:absolute; top:0.25rem; right:0.25rem; }
+
+  /* The Excalidraw canvas needs a real, non-scrolling height to lay
+     itself out in — the large modal variant below gives it one via
+     flex:1/min-height:0 all the way down from .modal.large itself. */
+  .floor-plan-editor { flex:1; min-height:0; display:flex; flex-direction:column; gap:0.6rem; width:100%; }
+  .floor-plan-editor-toolbar { display:flex; gap:0.6rem; align-items:center; flex-shrink:0; }
+  .floor-plan-name-input { flex:1; }
+  .floor-plan-canvas-wrap { flex:1; min-height:0; border:1px solid var(--border); position:relative; }
 
   /* Detail page — Colors section. Same card look as the House page's
      palette (.palette-color-* above), plus a role input per link and a

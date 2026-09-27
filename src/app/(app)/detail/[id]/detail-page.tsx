@@ -19,6 +19,7 @@ import {
   deleteChecklistItem,
 } from "@/lib/actions";
 import { Panel } from "@/components/panel";
+import { FloorPlanSection } from "@/components/floor-plan-section";
 import { ReferencesPanel } from "./references-panel";
 import { ColorsSection } from "./colors-section";
 import { ProgressPhotosPanel } from "./progress-photos-panel";
@@ -34,7 +35,10 @@ import type {
   progressPhotos as progressPhotosTable,
   housePaletteColors as housePaletteColorsTable,
   detailPaletteColors as detailPaletteColorsTable,
+  floorPlanDetailLinks as floorPlanDetailLinksTable,
+  floorPlanHouseLinks as floorPlanHouseLinksTable,
 } from "@/db/schema";
+import type { FloorPlanWithContext } from "@/lib/derived";
 
 type Detail = typeof detailsTable.$inferSelect;
 type House = typeof housesTable.$inferSelect;
@@ -46,6 +50,8 @@ type BoardImage = typeof boardImagesTable.$inferSelect;
 type ProgressPhoto = typeof progressPhotosTable.$inferSelect;
 type PaletteColor = typeof housePaletteColorsTable.$inferSelect;
 type DetailPaletteColorLink = typeof detailPaletteColorsTable.$inferSelect;
+type FloorPlanDetailLink = typeof floorPlanDetailLinksTable.$inferSelect;
+type FloorPlanHouseLink = typeof floorPlanHouseLinksTable.$inferSelect;
 
 const STATUS_LABEL: Record<string, string> = {
   not_started: "Not started",
@@ -78,6 +84,9 @@ export function DetailPageClient({
   contentTypeByAssetId,
   housePaletteColors,
   detailPaletteColors,
+  floorPlans,
+  floorPlanDetailLinks,
+  floorPlanHouseLinks,
 }: {
   detail: Detail;
   houses: House[];
@@ -90,6 +99,9 @@ export function DetailPageClient({
   contentTypeByAssetId: Record<string, string | null>;
   housePaletteColors: PaletteColor[];
   detailPaletteColors: DetailPaletteColorLink[];
+  floorPlans: FloorPlanWithContext[];
+  floorPlanDetailLinks: FloorPlanDetailLink[];
+  floorPlanHouseLinks: FloorPlanHouseLink[];
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -163,8 +175,10 @@ export function DetailPageClient({
         </div>
       </div>
 
-      {/* Vibe — the visual direction: mood board/references and the
-          detail's linked paint colors, side by side at tablet+ width. */}
+      {/* Vibe — the visual direction: mood board/references, the detail's
+          linked paint colors, and the house's floor plans/sketches (shared
+          across every detail in the house, same data as the Houses page —
+          just handy to have open while working a specific room). */}
       <section className="db-section">
         <h2 className="db-section-title">Vibe</h2>
         <div className="panel-grid">
@@ -175,6 +189,15 @@ export function DetailPageClient({
             pinterestBoardUrl={detail.pinterestBoardUrl}
           />
           <ColorsSection detailId={detail.id} houseColors={housePaletteColors} links={detailPaletteColors} />
+          <Panel title="Floor plan & sketches">
+            <FloorPlanSection
+              ownerType="detail"
+              ownerId={detail.id}
+              allFloorPlans={floorPlans}
+              detailLinks={floorPlanDetailLinks}
+              houseLinks={floorPlanHouseLinks}
+            />
+          </Panel>
         </div>
       </section>
 

@@ -22,6 +22,9 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       contentTypeByAssetId={data.contentTypeByAssetId}
       housePaletteColors={data.housePaletteColors}
       detailPaletteColors={data.detailPaletteColors}
+      floorPlans={data.floorPlans}
+      floorPlanDetailLinks={data.floorPlanDetailLinks}
+      floorPlanHouseLinks={data.floorPlanHouseLinks}
     />
   );
 }
