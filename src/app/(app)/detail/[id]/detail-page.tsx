@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { money, num } from "@/lib/format";
+import { money, num, fmtDate } from "@/lib/format";
 import { sanitizeProductUrl, retailerNameFromUrl } from "@/lib/product-link";
 import {
   updateDetail,
@@ -267,6 +267,11 @@ function MaterialsPanel({
   );
   const planned = sorted.reduce((sum, m) => sum + num(m.roughQuantity) * num(m.roughUnitCost), 0);
   const linkedActual = lines.filter((l) => l.materialId).reduce((sum, l) => sum + num(l.cost), 0);
+  // Spend that's already tied to this detail (typically assigned over from
+  // a receipt) but not yet pointed at a specific material — with the old
+  // "General spend" panel gone, this is the only place left for that spend
+  // to become visible, via each row's "attach spend" action below.
+  const unassignedLines = lines.filter((l) => !l.materialId);
   return (
     <Panel
       title={
@@ -282,7 +287,13 @@ function MaterialsPanel({
     >
       {sorted.length ? (
         sorted.map((m, i) => (
-          <MaterialRow key={m.id} index={i} material={m} lines={lines.filter((l) => l.materialId === m.id)} />
+          <MaterialRow
+            key={m.id}
+            index={i}
+            material={m}
+            lines={lines.filter((l) => l.materialId === m.id)}
+            unassignedLines={unassignedLines}
+          />
         ))
       ) : (
         <div className="empty-note">No materials roughed out yet.</div>
@@ -297,10 +308,21 @@ function MaterialsPanel({
 // description is used for the Qty × Rate = Est · Actual comparison instead
 // of freeform text, and any spend logged against this material (via
 // lineItems.materialId) shows as its own compact sub-list.
-function MaterialRow({ index, material: m, lines }: { index: number; material: MaterialItem; lines: LineItem[] }) {
+function MaterialRow({
+  index,
+  material: m,
+  lines,
+  unassignedLines,
+}: {
+  index: number;
+  material: MaterialItem;
+  lines: LineItem[];
+  unassignedLines: LineItem[];
+}) {
   const [, startTransition] = useTransition();
   const [addingLink, setAddingLink] = useState(false);
   const [addingSpend, setAddingSpend] = useState(false);
+  const [addingAttach, setAddingAttach] = useState(false);
   const est = num(m.roughQuantity) * num(m.roughUnitCost);
   const actual = lines.reduce((sum, l) => sum + num(l.cost), 0);
   const over = est > 0 && actual > est;
@@ -400,11 +422,36 @@ function MaterialRow({ index, material: m, lines }: { index: number; material: M
               Add
             </button>
           </form>
-        ) : (
-          <button className="db-materials-link-toggle" onClick={() => setAddingSpend(true)}>
-            + log spend
-          </button>
-        )}
+        ) : null}
+
+        {addingAttach ? (
+          <form
+            className="db-material-spend-add-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.currentTarget;
+              const lineItemId = (form.elements.namedItem("lineItemId") as HTMLSelectElement).value;
+              if (!lineItemId) return;
+              startTransition(() => updateLineItem(lineItemId, { materialId: m.id }));
+              setAddingAttach(false);
+            }}
+          >
+            <select name="lineItemId" autoFocus defaultValue="">
+              <option value="" disabled>
+                Select an expense…
+              </option>
+              {unassignedLines.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.vendor || l.description || "Spend"} — {money(l.cost)}
+                  {l.date ? ` (${fmtDate(l.date)})` : ""}
+                </option>
+              ))}
+            </select>
+            <button className="secondary" type="submit">
+              Attach
+            </button>
+          </form>
+        ) : null}
 
         {m.productUrl ? (
           <div className="material-link-row">
@@ -455,11 +502,30 @@ function MaterialRow({ index, material: m, lines }: { index: number; material: M
               }}
             />
           </div>
-        ) : (
-          <button className="db-materials-link-toggle" onClick={() => setAddingLink(true)}>
-            + product link
-          </button>
-        )}
+        ) : null}
+
+        {/* Action footer — Log spend / Product link / Attach spend. Attach
+            spend only appears when this detail actually has spend sitting
+            unassigned to any material (typically because it was assigned
+            over from the Receipts page) — with nothing to attach, the
+            action would just open an empty picker. */}
+        <div className="db-material-actions">
+          {!addingSpend ? (
+            <button className="db-materials-link-toggle" onClick={() => setAddingSpend(true)}>
+              + log spend
+            </button>
+          ) : null}
+          {!m.productUrl && !addingLink ? (
+            <button className="db-materials-link-toggle" onClick={() => setAddingLink(true)}>
+              + product link
+            </button>
+          ) : null}
+          {unassignedLines.length > 0 && !addingAttach ? (
+            <button className="db-materials-link-toggle" onClick={() => setAddingAttach(true)}>
+              + attach spend
+            </button>
+          ) : null}
+        </div>
       </div>
       <select
         className={`db-material-status ${m.status}`}

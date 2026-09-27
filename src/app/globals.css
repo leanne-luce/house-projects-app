@@ -549,6 +549,11 @@
   .db-materials-link-input-row { display:flex; gap:var(--db-space-1); margin-top:var(--db-space-1); }
   .db-materials-link-input-row input { flex:1; }
 
+  /* Action footer — Log spend / Product link / Attach spend, grouped into
+     one row instead of each sitting on its own stacked line. */
+  .db-material-actions { display:flex; align-items:center; gap:var(--db-space-4); flex-wrap:wrap; margin-top:var(--db-space-2); }
+  .db-material-actions .db-materials-link-toggle { margin-top:0; }
+
   .db-material-compare {
     display:flex; align-items:center; gap:var(--db-space-1); flex-wrap:wrap; margin-top:var(--db-space-1);
     font-family: var(--font-sans); font-size:0.78rem; color:var(--text-faint);
@@ -569,7 +574,7 @@
   .db-material-spend-input:hover, .db-material-spend-input:focus { background:var(--surface-2); outline:1px solid var(--border-strong); }
   .db-material-spend-input.num { flex:0 0 auto; width:4.5rem; text-align:right; }
   .db-material-spend-add-row { display:flex; gap:var(--db-space-1); margin-top:var(--db-space-1); }
-  .db-material-spend-add-row input { flex:1; }
+  .db-material-spend-add-row input, .db-material-spend-add-row select { flex:1; min-width:0; }
 
   .db-mood-hint { font-family: var(--font-sans); font-size:0.8125rem; color:var(--text-muted); margin-bottom:var(--db-space-4); padding-bottom:var(--db-space-4); border-bottom:1px solid var(--border); }
 
