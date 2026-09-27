@@ -117,9 +117,8 @@ function UploadForm({ houseId }: { houseId: string }) {
         </button>
       </div>
       <div className="scratchpad-help" style={{ marginTop: "0.4rem" }}>
-        Photos run through OCR; PDFs get their embedded text read directly (a scanned PDF with no real text
-        layer won&apos;t have anything to read — add items by hand in that case). Both are imperfect, so
-        review what&apos;s found. Uploading the same file twice gets flagged.
+        Photos and PDFs are both read directly by AI to pull out line items — still imperfect, so review
+        what&apos;s found. Uploading the same file twice gets flagged.
       </div>
     </div>
   );
@@ -210,7 +209,7 @@ function ReceiptCard({
                 setRescanning(false);
               }}
             >
-              {rescanning ? "Scanning…" : items.length ? "Re-scan" : isPdf ? "Read PDF" : "Run OCR"}
+              {rescanning ? "Scanning…" : items.length ? "Re-scan" : "Scan"}
             </button>
             <button className="link-btn" onClick={() => setManualOpen((v) => !v)}>
               + Add item manually

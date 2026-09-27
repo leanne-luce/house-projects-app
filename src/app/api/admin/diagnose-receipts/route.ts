@@ -2,12 +2,12 @@ import { db } from "@/db";
 import { receipts, assets } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { readAssetBuffer } from "@/lib/storage";
-import { runOcr, extractPdfText } from "@/lib/ocr";
+import { extractReceipt } from "@/lib/receipt-ai";
 
 // TEMPORARY diagnostic endpoint for the "receipt stuck at Scanning… forever"
 // report. Read-only against `receipts`/`assets` (never touches status) —
-// the actual re-run of readAssetBuffer/runOcr/extractPdfText below is done
-// live, in this request, so whatever it reports is exactly what a real
+// the actual re-run of readAssetBuffer/extractReceipt below is done live,
+// in this request, so whatever it reports is exactly what a real
 // production invocation does, not a guess made from local dev. Same
 // force-dynamic + no-store reasoning as migrate-room-group's route.
 //
@@ -55,20 +55,18 @@ export async function GET() {
       continue;
     }
 
-    const isPdf = asset.contentType === "application/pdf";
     const extractStart = Date.now();
     try {
-      const result = isPdf
-        ? await withTimeout(extractPdfText(buffer), 15_000, "extractPdfText")
-        : await withTimeout(runOcr(buffer), 25_000, "runOcr");
+      const result = await withTimeout(extractReceipt(buffer, asset.contentType || "image/jpeg"), 30_000, "extractReceipt");
       entry.extractMs = Date.now() - extractStart;
       if ("error" in result) {
         entry.extractOk = false;
         entry.extractError = result.error;
       } else {
         entry.extractOk = true;
-        entry.textLength = result.text.length;
-        entry.textSnippet = result.text.slice(0, 200);
+        entry.vendor = result.extraction.vendor;
+        entry.itemCount = result.extraction.items.length;
+        entry.items = result.extraction.items.slice(0, 10);
       }
     } catch (err) {
       entry.extractMs = Date.now() - extractStart;
@@ -83,6 +81,7 @@ export async function GET() {
     {
       ok: true,
       blobConfigured: !!process.env.BLOB_READ_WRITE_TOKEN,
+      anthropicConfigured: !!process.env.ANTHROPIC_API_KEY,
       stuckCount: stuck.length,
       results,
     },

@@ -36,7 +36,7 @@ import {
 import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { saveAsset, saveAssetBuffer, readAssetBuffer } from "./storage";
-import { runOcr, extractPdfText, parseReceiptLines } from "./ocr";
+import { extractReceipt } from "./receipt-ai";
 import { sanitizeProductUrl, retailerNameFromUrl } from "./product-link";
 import crypto from "node:crypto";
 
@@ -651,14 +651,13 @@ async function maybeMarkReceiptLogged(receiptId: string) {
 async function extractAndStoreLineItems(receiptId: string, fileBuffer: Buffer, contentType: string) {
   await db.update(receipts).set({ status: "processing", ocrError: null }).where(eq(receipts.id, receiptId));
 
-  const isPdf = contentType === "application/pdf";
-  const result = isPdf ? await extractPdfText(fileBuffer) : await runOcr(fileBuffer);
+  const result = await extractReceipt(fileBuffer, contentType);
   if ("error" in result) {
     await db.update(receipts).set({ status: "new", ocrError: result.error }).where(eq(receipts.id, receiptId));
     return;
   }
 
-  const found = parseReceiptLines(result.text);
+  const { extraction, rawText } = result;
 
   // DEVIATION from the prototype: re-scanning there just appended newly
   // found items on top of whatever was already there, so clicking
@@ -670,7 +669,7 @@ async function extractAndStoreLineItems(receiptId: string, fileBuffer: Buffer, c
     .delete(receiptLineItems)
     .where(and(eq(receiptLineItems.receiptId, receiptId), eq(receiptLineItems.status, "pending")));
 
-  for (const item of found) {
+  for (const item of extraction.items) {
     await db.insert(receiptLineItems).values({
       receiptId,
       description: item.description,
@@ -679,16 +678,18 @@ async function extractAndStoreLineItems(receiptId: string, fileBuffer: Buffer, c
     });
   }
 
+  // Only fill vendor from the extraction if nothing's there yet — never
+  // clobber a name the user already typed in by hand.
+  const [current] = await db.select().from(receipts).where(eq(receipts.id, receiptId)).limit(1);
+  const vendorPatch = !current?.vendor && extraction.vendor ? { vendor: extraction.vendor } : {};
+
   await db
     .update(receipts)
     .set({
       status: "new",
-      ocrText: result.text,
-      ocrError: found.length
-        ? null
-        : isPdf
-          ? "Read the PDF, but couldn't confidently pick out line items — this can happen if it's a scanned image with no real text layer. Add them by hand below."
-          : "Scanned it, but couldn't confidently pick out line items — add them by hand below.",
+      ocrText: rawText,
+      ocrError: extraction.items.length ? null : "Read it, but couldn't confidently pick out line items — add them by hand below.",
+      ...vendorPatch,
     })
     .where(eq(receipts.id, receiptId));
 
